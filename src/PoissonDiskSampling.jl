@@ -48,6 +48,13 @@ struct Annulus{dim}
     r2::Float64
 end
 
+function random_point(annulus::Annulus{1})
+    r = annulus.r1 + rand() * (annulus.r2 - annulus.r1)
+    sign = ifelse(rand(Bool), 1, -1)
+    x = sign * r
+    annulus.centroid .+ x
+end
+
 function random_point(annulus::Annulus{2})
     r = annulus.r1 + rand() * (annulus.r2 - annulus.r1)
     θ = rand() * 2π
