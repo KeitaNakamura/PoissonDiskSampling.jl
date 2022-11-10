@@ -22,12 +22,11 @@ function Grid(dx::Real, minmaxes::Vararg{Tuple{Real, Real}, dim}) where {dim}
     Grid{dim}(dx, min, max, map(length, axes))
 end
 
-function whichcell(grid::Grid, x::Vec{dim, T}) where {dim, T}
+function whichcell(grid::Grid, x::Vec)
     xmin = grid.min
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
     ncells = size(grid) .- 1
-    all(@. ξ == ncells) && return CartesianIndex(ncells)
     all(@. 0 ≤ ξ < ncells) || return nothing # use `<` because of `floor`
     CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
 end
@@ -48,35 +47,32 @@ struct Annulus{dim}
     r2::Float64
 end
 
-function random_point(annulus::Annulus{1})
+function random_point(annulus::Annulus{n}) where {n}
+    n > 1 || throw(ArgumentError("dimensions must be ≥ 2"))
     r = annulus.r1 + rand() * (annulus.r2 - annulus.r1)
-    sign = ifelse(rand(Bool), 1, -1)
-    x = sign * r
-    annulus.centroid .+ x
+    θs = ntuple(i->rand()*ifelse(i==n-1, π, 2π), Val(n-1))
+    map(+, annulus.centroid, spherical_coordinates(r, θs))
 end
 
-function random_point(annulus::Annulus{2})
-    r = annulus.r1 + rand() * (annulus.r2 - annulus.r1)
-    θ = rand() * 2π
-    x = r * cos(θ)
-    y = r * sin(θ)
-    annulus.centroid .+ (x, y)
+# https://en.wikipedia.org/wiki/N-sphere#Spherical_coordinates
+@inline function spherical_coordinates(r::Float64, θs::Tuple{Vararg{Float64}})
+    broadcast(*, (r,), coords_sin(θs), coords_cos(θs))
 end
-
-function random_point(annulus::Annulus{3})
-    r = annulus.r1 + rand() * (annulus.r2 - annulus.r1)
-    θ = rand() * π
-    ϕ = rand() * 2π
-    x = r * sin(θ) * cos(ϕ)
-    y = r * sin(θ) * sin(ϕ)
-    z = r * cos(θ)
-    annulus.centroid .+ (x, y, z)
+@inline coords_sin(::Tuple{}) = (1.0,)
+@inline function coords_sin(θs::Tuple{Vararg{Float64}})
+    xs = coords_sin(Base.front(θs))
+    xlast = xs[end] * sin(θs[end])
+    (xs..., xlast)
+end
+@inline function coords_cos(θs::Tuple{Vararg{Float64}})
+    (map(cos, θs)..., 1.0)
 end
 
 #########################
 # Poisson disk sampling #
 #########################
 
+# https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
 function generate(r::Real, minmaxes::Vararg{Tuple{Real, Real}, dim}; num_generations::Int = 30) where {dim}
     dx = r / √dim
     grid = Grid(dx, minmaxes...)
