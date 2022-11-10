@@ -2,10 +2,12 @@ module PoissonDiskSampling
 
 const Vec{dim, T} = NTuple{dim, T}
 
-########
-# Grid #
-########
+"""
+    Grid(dx, (min_1, max_1)..., (min_n, max_n))
 
+Construct grid with the domain ```[min_1, max_1)``` ... ```[min_n, max_n)```.
+`dx` is the cell size of the grid.
+"""
 struct Grid{dim}
     dx::Float64
     min::NTuple{dim, Float64}
@@ -37,9 +39,7 @@ function random_point(grid::Grid)
     end
 end
 
-###########
-# Annulus #
-###########
+sampling_distance(grid::Grid{n}) where {n} = grid.dx * √n
 
 struct Annulus{dim}
     centroid::Vec{dim, Float64}
@@ -50,7 +50,7 @@ end
 function random_point(annulus::Annulus{n}) where {n}
     n > 1 || throw(ArgumentError("dimensions must be ≥ 2"))
     r = annulus.r1 + rand() * (annulus.r2 - annulus.r1)
-    θs = ntuple(i->rand()*ifelse(i==n-1, π, 2π), Val(n-1))
+    θs = ntuple(i->rand()*ifelse(i==n-1, 2π, π), Val(n-1))
     map(+, annulus.centroid, spherical_coordinates(r, θs))
 end
 
@@ -68,14 +68,34 @@ end
     (map(cos, θs)..., 1.0)
 end
 
-#########################
-# Poisson disk sampling #
-#########################
+"""
+    PoissonDiskSampling.generate((min_1, max_1)..., (min_n, max_n); r, k = 30)
+    PoissonDiskSampling.generate((min_1, max_1)..., (min_n, max_n); dx, k = 30)
+
+Geneate points randomly based on the Poisson disk sampling in the domain ```[min_1, max_1)``` ... ```[min_n, max_n)```.
+Give either minimum distance `r` or cell size `dx` of the grid.
+The cell size is bounded by `r/√n` (where `n` is the dimension of the problem),
+so that each grid cell will contain at most one sample.
+`k` is the limit of samples. The algorithm will give up if no valid sample is found after `k` trials.
+See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* for more details.
+
+It is also possible to constrct the grid and then generate points as
+
+    PoissonDiskSampling.generate(grid::Grid; k = 30)
+"""
+function generate end
+
+function generate(minmaxes::Vararg{Tuple{Real, Real}}; dx::Union{Nothing, Real}=nothing, r::Union{Nothing, Real}=nothing, k::Int=30)
+    _generate(minmaxes, dx, r, k)
+end
+generate(grid::Grid; k::Int=30) = _generate(grid, k)
+
+_generate(minmaxes::NTuple{n}, dx::Nothing, r::Real, k::Int) where {n} = _generate(Grid(r/√n, minmaxes...), k)
+_generate(minmaxes::Tuple, dx::Real, r::Nothing, k::Int) = _generate(Grid(dx, minmaxes...), k)
 
 # https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
-function generate(r::Real, minmaxes::Vararg{Tuple{Real, Real}, dim}; num_generations::Int = 30) where {dim}
-    dx = r / √dim
-    grid = Grid(dx, minmaxes...)
+function _generate(grid::Grid{dim}, num_generations::Int) where {dim}
+    r = sampling_distance(grid)
     cells = fill(-1, size(grid).-1)
 
     active_list = Int[]
