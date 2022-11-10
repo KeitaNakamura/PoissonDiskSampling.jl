@@ -1,7 +1,7 @@
 name = "PoissonDiskSampling"
 uuid = "d57be0ce-7c7e-4f32-9a47-3bfb603400bb"
 authors = ["Keita Nakamura <keita.nakamura.1109@gmail.com>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [compat]
 julia = "1.6"
