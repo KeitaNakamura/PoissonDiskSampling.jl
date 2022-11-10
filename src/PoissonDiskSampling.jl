@@ -18,7 +18,7 @@ Base.size(grid::Grid) = grid.size
 
 function Grid(dx::Real, minmaxes::Vararg{Tuple{Real, Real}, dim}) where {dim}
     all(minmax->minmax[1]<minmax[2], minmaxes) || throw(ArgumentError("`(min, max)` must be `min < max`"))
-    axes = map(minmax->range(minmax...; step=dx), minmaxes)
+    axes = map(minmax->minmax[1]:dx:minmax[2], minmaxes)
     min = map(first, axes)
     max = map(last, axes)
     Grid{dim}(dx, min, max, map(length, axes))
@@ -129,7 +129,7 @@ function _generate(grid::Grid{dim}, num_generations::Int) where {dim}
                 found = true
             end
         end
-        !found && popat!(active_list, index)
+        !found && deleteat!(active_list, index)
     end
 
     points
