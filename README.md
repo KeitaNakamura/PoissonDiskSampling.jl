@@ -1,4 +1,8 @@
-# PoissonDiskSampling
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/KeitaNakamura/PoissonDiskSampling.jl/blob/main/assets/logo-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/KeitaNakamura/PoissonDiskSampling.jl/blob/main/assets/logo-dark.png">
+  <img alt="logo" src="https://github.com/KeitaNakamura/PoissonDiskSampling.jl/blob/main/assets/logo-light.png" width=600>
+</picture>
 
 *n-dimensional Poisson disk sampling written in Julia*
 
