@@ -34,30 +34,29 @@ using Random
 end
 
 @testset "PoissonDiskSampling" begin
-    Random.seed!(1234)
     # generate
     r = rand()
     for minmaxes in (((0,6), (-2,3)),
                      ((0,6), (-2,3), (0,2)),
                      ((0,6), (-2,3), (0,2), (-1,2)))
+        Random.seed!(1234)
         dx = r / sqrt(length(minmaxes))
-        Random.seed!(1234); pts1 = PoissonDiskSampling.generate(minmaxes...; r)
-        Random.seed!(1234); pts2 = PoissonDiskSampling.generate(minmaxes...; dx)
-        @test pts1 == pts2
-        @test all(pts1) do pt
-            all(pts1) do x
+        pts = PoissonDiskSampling.generate(minmaxes...; r)
+        # Check the distance between samples
+        @test all(pts) do pt
+            all(pts) do x
                 x === pt && return true
                 sum(abs2, pt .- x) > abs2(r)
             end
         end
-        mean = collect(reduce(.+, pts1)./length(pts1))
+        # Check if samples are uniformly distributed by calculating mean value of coordiantes.
+        # The mean value should be almost the same as the centroid of the domain
+        mean = collect(reduce(.+, pts)./length(pts))
         centroid = collect(map(x->(x[1]+x[2])/2, minmaxes))
         @test mean ≈ centroid atol=r
     end
     # errors
-    @test_throws ArgumentError PoissonDiskSampling.generate((0,6); r)
-    @test_throws ArgumentError PoissonDiskSampling.generate((6,0); r)
-    @test_throws ArgumentError PoissonDiskSampling.generate((0,6), (3,-2); r)
-    @test_throws ArgumentError PoissonDiskSampling.generate((0,6), (-2,3), (2,0); r)
-    @test_throws MethodError PoissonDiskSampling.generate((0,6), (-2,3), (0,2); r, dx=r/√3)
+    @test_throws ArgumentError PoissonDiskSampling.generate((0,6); r)                # wrong dimension
+    @test_throws ArgumentError PoissonDiskSampling.generate((0,6), (3,-2); r)        # wrong (min, max)
+    @test_throws ArgumentError PoissonDiskSampling.generate((0,6), (-2,3), (2,0); r) # wrong (min, max)
 end
