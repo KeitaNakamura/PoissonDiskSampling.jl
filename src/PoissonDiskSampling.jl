@@ -80,11 +80,11 @@ each smaple, i.e., the algorithm will give up if no valid sample is found after 
 See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* for more details.
 """
 function generate(minmaxes::Vararg{Tuple{Real, Real}, n}; r::Real, k::Int=30) where {n}
-    _generate(Grid(r/√n, minmaxes...), k)
+    generate(Grid(r/√n, minmaxes...), k)
 end
 
 # https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
-function _generate(grid::Grid{dim}, num_generations::Int) where {dim}
+function generate(grid::Grid{dim}, num_generations::Int) where {dim}
     r = sampling_distance(grid)
     cells = fill(-1, size(grid).-1)
 
