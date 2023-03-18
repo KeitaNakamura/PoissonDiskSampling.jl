@@ -1,6 +1,7 @@
 using PoissonDiskSampling
 using Test
 using Random
+using StableRNGs
 
 @testset "Misc" begin
     @testset "Spherical coordinates" begin
@@ -59,4 +60,8 @@ end
     @test_throws ArgumentError PoissonDiskSampling.generate((0,6); r)                # wrong dimension
     @test_throws ArgumentError PoissonDiskSampling.generate((0,6), (3,-2); r)        # wrong (min, max)
     @test_throws ArgumentError PoissonDiskSampling.generate((0,6), (-2,3), (2,0); r) # wrong (min, max)
+    # StableRNG
+    rng = StableRNG(1234)
+    pts = PoissonDiskSampling.generate(rng, (0,8), (0,10); r=rand(rng))
+    @test collect(reduce(.+, pts) ./ length(pts)) ≈ [3.8345015153218833, 4.83758270027716]
 end
