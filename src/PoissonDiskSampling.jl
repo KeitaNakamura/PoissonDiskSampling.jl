@@ -1,5 +1,7 @@
 module PoissonDiskSampling
 
+using Random
+
 const Vec{dim, T} = NTuple{dim, T}
 
 """
@@ -33,9 +35,9 @@ function whichcell(grid::Grid, x::Vec)
     CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
 end
 
-function random_point(grid::Grid)
+function random_point(rng, grid::Grid)
     map(grid.min, grid.max) do xmin, xmax
-        xmin + rand() * (xmax - xmin)
+        xmin + rand(rng) * (xmax - xmin)
     end
 end
 
@@ -47,10 +49,10 @@ struct Annulus{dim}
     r2::Float64
 end
 
-function random_point(annulus::Annulus{n}) where {n}
+function random_point(rng, annulus::Annulus{n}) where {n}
     n > 1 || throw(ArgumentError("dimensions must be ≥ 2"))
-    r = annulus.r1 + rand() * (annulus.r2 - annulus.r1)
-    θs = ntuple(i->rand()*ifelse(i==n-1, 2π, π), Val(n-1))
+    r = annulus.r1 + rand(rng) * (annulus.r2 - annulus.r1)
+    θs = ntuple(i->rand(rng)*ifelse(i==n-1, 2π, π), Val(n-1))
     map(+, annulus.centroid, spherical_coordinates(r, θs))
 end
 
@@ -79,28 +81,31 @@ each smaple, i.e., the algorithm will give up if no valid sample is found after 
 
 See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* for more details.
 """
-function generate(minmaxes::Vararg{Tuple{Real, Real}, n}; r::Real, k::Int=30) where {n}
-    generate(Grid(r/√n, minmaxes...), k)
+function generate(minmaxes::Vararg{Tuple{Real, Real}}; r::Real, k::Int=30)
+    generate(Random.GLOBAL_RNG, minmaxes...; r, k)
+end
+function generate(rng, minmaxes::Vararg{Tuple{Real, Real}, n}; r::Real, k::Int=30) where {n}
+    generate(rng, Grid(r/√n, minmaxes...), k)
 end
 
 # https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
-function generate(grid::Grid{dim}, num_generations::Int) where {dim}
+function generate(rng, grid::Grid{dim}, num_generations::Int) where {dim}
     r = sampling_distance(grid)
     cells = fill(-1, size(grid).-1)
 
     active_list = Int[]
     points = Vec{dim, Float64}[]
 
-    push!(points, random_point(grid))
+    push!(points, random_point(rng, grid))
     push!(active_list, length(points))
     cells[whichcell(grid, points[end])] = length(points)
 
     while !isempty(active_list)
-        index = rand(1:length(active_list))
+        index = rand(rng, 1:length(active_list))
         x = points[active_list[index]]
         found = false
         for k in 1:num_generations
-            x_k = random_point(Annulus(x, r, 2r))
+            x_k = random_point(rng, Annulus(x, r, 2r))
             I = whichcell(grid, x_k)
             I === nothing && continue
             u = 2*oneunit(I)
