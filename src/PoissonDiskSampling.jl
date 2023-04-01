@@ -71,7 +71,7 @@ end
 end
 
 """
-    PoissonDiskSampling.generate((min_1, max_1)..., (min_n, max_n); r, k = 30)
+    PoissonDiskSampling.generate(r, (min_1, max_1)..., (min_n, max_n); k = 30)
 
 Geneate coordinates based on the Poisson disk sampling.
 
@@ -81,10 +81,10 @@ each smaple, i.e., the algorithm will give up if no valid sample is found after 
 
 See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* for more details.
 """
-function generate(minmaxes::Vararg{Tuple{Real, Real}}; r::Real, k::Int=30)
-    generate(Random.GLOBAL_RNG, minmaxes...; r, k)
+function generate(r::Real, minmaxes::Vararg{Tuple{Real, Real}}; k::Int=30)
+    generate(Random.GLOBAL_RNG, r, minmaxes...; k)
 end
-function generate(rng, minmaxes::Vararg{Tuple{Real, Real}, n}; r::Real, k::Int=30) where {n}
+function generate(rng, r, minmaxes::Vararg{Tuple{Real, Real}, n}; k::Int=30) where {n}
     generate(rng, Grid(r/√n, minmaxes...), k)
 end
 
