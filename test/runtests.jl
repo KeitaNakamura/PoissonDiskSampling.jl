@@ -42,7 +42,7 @@ end
                      ((0,6), (-2,3), (0,2), (-1,2)))
         Random.seed!(1234)
         dx = r / sqrt(length(minmaxes))
-        pts = PoissonDiskSampling.generate(minmaxes...; r)
+        pts = PoissonDiskSampling.generate(r, minmaxes...)
         # Check the distance between samples
         @test all(pts) do pt
             all(pts) do x
@@ -57,11 +57,11 @@ end
         @test mean ≈ centroid atol=r
     end
     # errors
-    @test_throws ArgumentError PoissonDiskSampling.generate((0,6); r)                # wrong dimension
-    @test_throws ArgumentError PoissonDiskSampling.generate((0,6), (3,-2); r)        # wrong (min, max)
-    @test_throws ArgumentError PoissonDiskSampling.generate((0,6), (-2,3), (2,0); r) # wrong (min, max)
+    @test_throws ArgumentError PoissonDiskSampling.generate(r, (0,6))                # wrong dimension
+    @test_throws ArgumentError PoissonDiskSampling.generate(r, (0,6), (3,-2))        # wrong (min, max)
+    @test_throws ArgumentError PoissonDiskSampling.generate(r, (0,6), (-2,3), (2,0)) # wrong (min, max)
     # StableRNG
     rng = StableRNG(1234)
-    pts = PoissonDiskSampling.generate(rng, (0,8), (0,10); r=rand(rng))
+    pts = PoissonDiskSampling.generate(rng, rand(rng), (0,8), (0,10))
     @test collect(reduce(.+, pts) ./ length(pts)) ≈ [3.8345015153218833, 4.83758270027716]
 end
