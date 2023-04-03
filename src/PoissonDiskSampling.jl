@@ -91,7 +91,7 @@ end
 # https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
 function generate(rng, grid::Grid{dim}, num_generations::Int) where {dim}
     r = sampling_distance(grid)
-    cells = fill(-1, size(grid).-1)
+    cells = zeros(UInt, size(grid).-1)
 
     active_list = Int[]
     points = Vec{dim, Float64}[]
@@ -112,12 +112,12 @@ function generate(rng, grid::Grid{dim}, num_generations::Int) where {dim}
             neighborcells = CartesianIndices(cells) ∩ ((I-u):(I+u))
             valid = all(neighborcells) do cellid
                 ptid = cells[cellid]
-                ptid == -1 && return true
+                iszero(ptid) && return true
                 p = points[ptid]
                 sum(abs2, x_k .- p) > abs2(r)
             end
             if valid
-                @assert cells[I] == -1
+                @assert iszero(cells[I])
                 push!(points, x_k)
                 push!(active_list, length(points))
                 cells[I] = length(points)
