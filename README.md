@@ -22,7 +22,7 @@ See `?PoissonDiskSampling.generate` for details.
 ```julia
 julia> using PoissonDiskSampling, Plots
 
-julia> points = PoissonDiskSampling.generate((0,5), (0,3); r = 0.1);
+julia> points = PoissonDiskSampling.generate(0.1, (0,5), (0,3));
 
 julia> typeof(points)
 Vector{Tuple{Float64, Float64}} (alias for Array{Tuple{Float64, Float64}, 1})
