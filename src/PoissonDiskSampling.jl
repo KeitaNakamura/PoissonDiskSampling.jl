@@ -7,8 +7,8 @@ const Vec{dim, T} = NTuple{dim, T}
 """
     Grid(dx, (min_1, max_1)..., (min_n, max_n))
 
-Construct grid with the domain ```[min_1, max_1)``` ... ```[min_n, max_n)```.
-`dx` is the cell size of the grid.
+Construct grid with the domain ``[min_1, max_1)`` ... ``[min_n, max_n)``,
+where ``max_n`` could be changed due to the grid spacing `dx`.
 """
 struct Grid{dim}
     dx::Float64
@@ -75,7 +75,7 @@ end
 
 Geneate coordinates based on the Poisson disk sampling.
 
-The domain must be rectangle as ```[min_1, max_1)``` ... ```[min_n, max_n)```.
+The domain must be rectangle as ``[min_1, max_1)`` ... ``[min_n, max_n)``.
 `r` is the minimum distance between samples. `k` is the number of trials for sampling at
 each smaple, i.e., the algorithm will give up if no valid sample is found after `k` trials.
 
