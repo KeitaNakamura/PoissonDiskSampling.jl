@@ -12,21 +12,23 @@ where ``max_n`` could be changed due to the grid spacing `dx`.
 """
 struct Grid{dim}
     dx::Float64
+    r::Float64
     min::NTuple{dim, Float64}
     max::NTuple{dim, Float64}
     size::NTuple{dim, Int}
 end
 Base.size(grid::Grid) = grid.size
+@inline sampling_distance(grid::Grid) = grid.r
 
-function Grid(dx::Real, minmaxes::Vararg{Tuple{Real, Real}, dim}) where {dim}
+function Grid(dx::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {n}
     all(minmax->minmax[1]<minmax[2], minmaxes) || throw(ArgumentError("`(min, max)` must be `min < max`"))
     axes = map(minmax->minmax[1]:dx:minmax[2], minmaxes)
     min = map(first, axes)
     max = map(last, axes)
-    Grid{dim}(dx, min, max, map(length, axes))
+    Grid{n}(dx, dx*√n, min, max, map(length, axes))
 end
 
-function whichcell(grid::Grid, x::Vec)
+function whichcell(x::Vec, grid::Grid)
     xmin = grid.min
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
@@ -40,8 +42,6 @@ function random_point(rng, grid::Grid)
         xmin + rand(rng) * (xmax - xmin)
     end
 end
-
-sampling_distance(grid::Grid{n}) where {n} = grid.dx * √n
 
 struct Annulus{dim}
     centroid::Vec{dim, Float64}
@@ -90,44 +90,53 @@ end
 
 # https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
 function generate(rng, grid::Grid{dim}, num_generations::Int) where {dim}
-    r = sampling_distance(grid)
-    cells = zeros(UInt, size(grid).-1)
+    cells = fill(nanvec(Vec{dim, Float64}), size(grid).-1)
+    generate!(rng, cells, grid, num_generations)
+    filter!(!isnanvec, vec(cells))
+end
 
-    active_list = Int[]
-    points = Vec{dim, Float64}[]
+function generate!(rng, cells::Array, grid::Grid{dim}, num_generations::Int) where {dim}
+    active_list = CartesianIndex{dim}[]
 
-    push!(points, random_point(rng, grid))
-    push!(active_list, length(points))
-    cells[whichcell(grid, points[end])] = length(points)
+    push!(active_list, set_point!(cells, random_point(rng, grid), grid))
 
     while !isempty(active_list)
         index = rand(rng, 1:length(active_list))
-        x = points[active_list[index]]
+        xᵢ = cells[active_list[index]]
         found = false
         for k in 1:num_generations
-            x_k = random_point(rng, Annulus(x, r, 2r))
-            I = whichcell(grid, x_k)
-            I === nothing && continue
-            u = 2*oneunit(I)
-            neighborcells = CartesianIndices(cells) ∩ ((I-u):(I+u))
-            valid = all(neighborcells) do cellid
-                ptid = cells[cellid]
-                iszero(ptid) && return true
-                p = points[ptid]
-                sum(abs2, x_k .- p) > abs2(r)
-            end
-            if valid
-                @assert iszero(cells[I])
-                push!(points, x_k)
-                push!(active_list, length(points))
-                cells[I] = length(points)
+            r = sampling_distance(grid)
+            Iₖ = set_point!(cells, random_point(rng, Annulus(xᵢ, r, 2r)), grid)
+            if Iₖ !== nothing
+                push!(active_list, Iₖ)
                 found = true
             end
         end
         !found && deleteat!(active_list, index)
     end
 
-    points
+    cells
 end
+
+function set_point!(cells, xₖ, grid)
+    Iₖ = whichcell(xₖ, grid)
+    Iₖ === nothing && return nothing
+    u = 2*oneunit(Iₖ)
+    neighborcells = CartesianIndices(cells) ∩ ((Iₖ-u):(Iₖ+u))
+    valid = all(neighborcells) do cellindex
+        x = cells[cellindex]
+        isnanvec(x) && return true
+        sum(abs2, xₖ .- x) > abs2(sampling_distance(grid))
+    end
+    if valid
+        @assert isnanvec(cells[Iₖ])
+        cells[Iₖ] = xₖ
+        return Iₖ
+    end
+    nothing
+end
+
+@inline nanvec(::Type{Vec{dim, T}}) where {dim, T} = Vec{dim, T}(ntuple(i->NaN, Val(dim)))
+@inline isnanvec(x::Vec) = x === nanvec(typeof(x))
 
 end # module PoissonDiskSampling
