@@ -135,13 +135,16 @@ end
 function generate!(rng, cells::Array, grid::Grid{dim}, num_generations::Int) where {dim}
     active_list = CartesianIndex{dim}[]
 
-    while true
+    found = false
+    for k in 1:num_generations
         I₀ = set_point!(cells, random_point(rng, grid), grid)
         if I₀ !== nothing
             push!(active_list, I₀)
+            found = true
             break
         end
     end
+    !found && return cells
 
     while !isempty(active_list)
         index = rand(rng, 1:length(active_list))
