@@ -1,7 +1,9 @@
 module PoissonDiskSampling
 
+using Base.Iterators: product
 using Random
 
+const BLOCKFACTOR = unsigned(3) # 2^3
 const Vec{dim, T} = NTuple{dim, T}
 
 """
@@ -16,6 +18,7 @@ struct Grid{dim}
     min::NTuple{dim, Float64}
     max::NTuple{dim, Float64}
     size::NTuple{dim, Int}
+    offset::CartesianIndex{dim}
 end
 Base.size(grid::Grid) = grid.size
 @inline sampling_distance(grid::Grid) = grid.r
@@ -25,7 +28,7 @@ function Grid(dx::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {n}
     axes = map(minmax->minmax[1]:dx:minmax[2], minmaxes)
     min = map(first, axes)
     max = map(last, axes)
-    Grid{n}(dx, dx*√n, min, max, map(length, axes))
+    Grid{n}(dx, dx*√n, min, max, map(length, axes), zero(CartesianIndex{n}))
 end
 
 function whichcell(x::Vec, grid::Grid)
@@ -34,13 +37,39 @@ function whichcell(x::Vec, grid::Grid)
     ξ = @. (x - xmin) * dx⁻¹
     ncells = size(grid) .- 1
     all(@. 0 ≤ ξ < ncells) || return nothing # use `<` because of `floor`
-    CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
+    grid.offset + CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
 end
 
 function random_point(rng, grid::Grid)
     map(grid.min, grid.max) do xmin, xmax
         xmin + rand(rng) * (xmax - xmin)
     end
+end
+
+function partition(grid::Grid{dim}, CI::CartesianIndices{dim}) where {dim}
+    @boundscheck checkbounds(CartesianIndices(size(grid)), CI)
+    Imin = first(CI).I
+    Imax = last(CI).I
+    new_min = @. grid.min + grid.dx * (Imin - 1)
+    new_max = @. grid.min + grid.dx * (Imax - 1)
+    Grid(grid.dx, grid.r, new_min, new_max, size(CI), CartesianIndex(Imin .- 1))
+end
+
+# block methods
+blocksize(gridsize::Tuple{Vararg{Int}}) = @. (gridsize-1)>>BLOCKFACTOR+1
+blocksize(grid::Grid) = blocksize(size(grid))
+function threadsafe_blocks(blocksize::NTuple{dim, Int}) where {dim}
+    starts = product(ntuple(i->1:2, Val(dim))...)
+    vec(map(st -> map(CartesianIndex{dim}, Iterators.product(StepRange.(st, 2, blocksize)...))::Array{CartesianIndex{dim}, dim}, starts))
+end
+function gridindices_from_blockindex(grid::Grid, blk::CartesianIndex)
+    start = @. (blk.I-1) << BLOCKFACTOR + 1
+    stop = @. start + (1 << BLOCKFACTOR)
+    (CartesianIndex(start):CartesianIndex(stop)) ∩ CartesianIndices(size(grid))
+end
+function blockpartition(grid::Grid{dim}, blk::CartesianIndex{dim}) where {dim}
+    @boundscheck checkbounds(CartesianIndices(blocksize(grid)), blk)
+    partition(grid, gridindices_from_blockindex(grid, blk))
 end
 
 struct Annulus{dim}
@@ -81,24 +110,38 @@ each smaple, i.e., the algorithm will give up if no valid sample is found after 
 
 See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* for more details.
 """
-function generate(r::Real, minmaxes::Vararg{Tuple{Real, Real}}; k::Int=30)
-    generate(Random.GLOBAL_RNG, r, minmaxes...; k)
+function generate(r::Real, minmaxes::Vararg{Tuple{Real, Real}}; k::Int=30, parallel::Bool=true)
+    generate(Random.GLOBAL_RNG, r, minmaxes...; k, parallel)
 end
-function generate(rng, r, minmaxes::Vararg{Tuple{Real, Real}, n}; k::Int=30) where {n}
-    generate(rng, Grid(r/√n, minmaxes...), k)
+function generate(rng, r, minmaxes::Vararg{Tuple{Real, Real}, n}; k::Int=30, parallel::Bool=true) where {n}
+    generate(rng, Grid(r/√n, minmaxes...), k, parallel)
 end
 
 # https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
-function generate(rng, grid::Grid{dim}, num_generations::Int) where {dim}
+function generate(rng, grid::Grid{dim}, num_generations::Int, parallel::Bool) where {dim}
     cells = fill(nanvec(Vec{dim, Float64}), size(grid).-1)
-    generate!(rng, cells, grid, num_generations)
+    if parallel && Threads.nthreads() > 1
+        for blocks in threadsafe_blocks(blocksize(grid))
+            Threads.@threads for blk in blocks
+                generate!(rng, cells, blockpartition(grid, blk), num_generations)
+            end
+        end
+    else
+        generate!(rng, cells, grid, num_generations)
+    end
     filter!(!isnanvec, vec(cells))
 end
 
 function generate!(rng, cells::Array, grid::Grid{dim}, num_generations::Int) where {dim}
     active_list = CartesianIndex{dim}[]
 
-    push!(active_list, set_point!(cells, random_point(rng, grid), grid))
+    while true
+        I₀ = set_point!(cells, random_point(rng, grid), grid)
+        if I₀ !== nothing
+            push!(active_list, I₀)
+            break
+        end
+    end
 
     while !isempty(active_list)
         index = rand(rng, 1:length(active_list))
