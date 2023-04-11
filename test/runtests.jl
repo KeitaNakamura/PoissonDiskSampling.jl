@@ -36,11 +36,11 @@ end
 
 @testset "PoissonDiskSampling" begin
     # generate
+    Random.seed!(1234)
     r = rand()
     for minmaxes in (((0,6), (-2,3)),
                      ((0,6), (-2,3), (0,2)),
                      ((0,6), (-2,3), (0,2), (-1,2)))
-        Random.seed!(1234)
         dx = r / sqrt(length(minmaxes))
         pts = PoissonDiskSampling.generate(r, minmaxes...)
         # Check the distance between samples
