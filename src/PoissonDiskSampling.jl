@@ -100,13 +100,14 @@ end
 end
 
 """
-    PoissonDiskSampling.generate(r, (min_1, max_1)..., (min_n, max_n); k = 30)
+    PoissonDiskSampling.generate(r, (min_1, max_1)..., (min_n, max_n); k = 30, parallel = true)
 
 Geneate coordinates based on the Poisson disk sampling.
 
 The domain must be rectangle as ``[min_1, max_1)`` ... ``[min_n, max_n)``.
 `r` is the minimum distance between samples. `k` is the number of trials for sampling at
 each smaple, i.e., the algorithm will give up if no valid sample is found after `k` trials.
+If `Threads.nthreads() > 1 && parallel`, multithreading is enabled.
 
 See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* for more details.
 """
