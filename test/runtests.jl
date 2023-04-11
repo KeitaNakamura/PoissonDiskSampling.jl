@@ -36,32 +36,34 @@ end
 
 @testset "PoissonDiskSampling" begin
     # generate
-    Random.seed!(1234)
-    r = rand()
-    for minmaxes in (((0,6), (-2,3)),
-                     ((0,6), (-2,3), (0,2)),
-                     ((0,6), (-2,3), (0,2), (-1,2)))
-        dx = r / sqrt(length(minmaxes))
-        pts = PoissonDiskSampling.generate(r, minmaxes...)
-        # Check the distance between samples
-        @test all(pts) do pt
-            all(pts) do x
-                x === pt && return true
-                sum(abs2, pt .- x) > abs2(r)
+    for parallel in (false, true)
+        Random.seed!(1234)
+        r = rand()
+        for minmaxes in (((0,6), (-2,3)),
+                         ((0,6), (-2,3), (0,2)),
+                         ((0,6), (-2,3), (0,2), (-1,2)))
+            dx = r / sqrt(length(minmaxes))
+            pts = PoissonDiskSampling.generate(r, minmaxes...; parallel)
+            # Check the distance between samples
+            @test all(pts) do pt
+                all(pts) do x
+                    x === pt && return true
+                    sum(abs2, pt .- x) > abs2(r)
+                end
             end
+            # Check if samples are uniformly distributed by calculating mean value of coordiantes.
+            # The mean value should be almost the same as the centroid of the domain
+            mean = collect(reduce(.+, pts)./length(pts))
+            centroid = collect(map(x->(x[1]+x[2])/2, minmaxes))
+            @test mean ≈ centroid atol=r
         end
-        # Check if samples are uniformly distributed by calculating mean value of coordiantes.
-        # The mean value should be almost the same as the centroid of the domain
-        mean = collect(reduce(.+, pts)./length(pts))
-        centroid = collect(map(x->(x[1]+x[2])/2, minmaxes))
-        @test mean ≈ centroid atol=r
+        # errors
+        @test_throws Exception PoissonDiskSampling.generate(r, (0,6); parallel)                # wrong dimension
+        @test_throws Exception PoissonDiskSampling.generate(r, (0,6), (3,-2); parallel)        # wrong (min, max)
+        @test_throws Exception PoissonDiskSampling.generate(r, (0,6), (-2,3), (2,0); parallel) # wrong (min, max)
     end
-    # errors
-    @test_throws ArgumentError PoissonDiskSampling.generate(r, (0,6))                # wrong dimension
-    @test_throws ArgumentError PoissonDiskSampling.generate(r, (0,6), (3,-2))        # wrong (min, max)
-    @test_throws ArgumentError PoissonDiskSampling.generate(r, (0,6), (-2,3), (2,0)) # wrong (min, max)
     # StableRNG
     rng = StableRNG(1234)
-    pts = PoissonDiskSampling.generate(rng, rand(rng), (0,8), (0,10))
+    pts = PoissonDiskSampling.generate(rng, rand(rng), (0,8), (0,10); parallel=false)
     @test collect(reduce(.+, pts) ./ length(pts)) ≈ [3.8345015153218833, 4.83758270027716]
 end
