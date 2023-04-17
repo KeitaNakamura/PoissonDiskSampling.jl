@@ -123,7 +123,7 @@ function generate(rng, grid::Grid{dim}, num_generations::Int, parallel::Bool) wh
     cells = fill(nanvec(Vec{dim, Float64}), size(grid).-1)
     if parallel && Threads.nthreads() > 1
         for blocks in threadsafe_blocks(blocksize(grid))
-            Threads.@threads for blk in blocks
+            Threads.@threads :static for blk in blocks
                 generate!(rng, cells, blockpartition(grid, blk), num_generations)
             end
         end
