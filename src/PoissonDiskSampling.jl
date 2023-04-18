@@ -124,28 +124,32 @@ function generate(rng, grid::Grid{dim}, num_generations::Int, parallel::Bool) wh
     if parallel && Threads.nthreads() > 1
         for blocks in threadsafe_blocks(blocksize(grid))
             Threads.@threads :static for blk in blocks
-                generate!(rng, cells, blockpartition(grid, blk), num_generations)
+                generate!(rng, cells, grid, gridindices_from_blockindex(grid, blk), num_generations)
             end
         end
     else
-        generate!(rng, cells, grid, num_generations)
+        generate!(rng, cells, grid, CartesianIndices(size(grid)), num_generations)
     end
     filter!(!isnanvec, vec(cells))
 end
 
-function generate!(rng, cells::Array, grid::Grid{dim}, num_generations::Int) where {dim}
-    active_list = CartesianIndex{dim}[]
+function generate!(rng, cells::Array, grid::Grid{dim}, gridindices::CartesianIndices, num_generations::Int) where {dim}
+    partgrid = partition(grid, gridindices)
+    cellindices = first(gridindices):(last(gridindices) - oneunit(CartesianIndex{dim}))
 
-    found = false
-    for k in 1:num_generations
-        I₀ = set_point!(cells, random_point(rng, grid), grid)
-        if I₀ !== nothing
-            push!(active_list, I₀)
-            found = true
-            break
+    active_list = filter(i->!isnanvec(cells[i]), cellindices)
+    if isempty(active_list)
+        found = false
+        for k in 1:num_generations*2
+            I₀ = set_point!(cells, random_point(rng, grid), grid)
+            if I₀ !== nothing
+                push!(active_list, I₀)
+                found = true
+                break
+            end
         end
+        !found && return cells
     end
-    !found && return cells
 
     while !isempty(active_list)
         index = rand(rng, 1:length(active_list))
@@ -155,7 +159,11 @@ function generate!(rng, cells::Array, grid::Grid{dim}, num_generations::Int) whe
             r = sampling_distance(grid)
             Iₖ = set_point!(cells, random_point(rng, Annulus(xᵢ, r, 2r)), grid)
             if Iₖ !== nothing
-                push!(active_list, Iₖ)
+                # `Iₖ` can be outside of `partgrid`, but add `Iₖ` into `active_list`
+                # only when it is in `partgrid`.
+                if Iₖ in cellindices
+                    push!(active_list, Iₖ)
+                end
                 found = true
             end
         end
