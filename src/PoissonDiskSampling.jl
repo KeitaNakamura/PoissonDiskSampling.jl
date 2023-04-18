@@ -141,7 +141,7 @@ function generate!(rng, cells::Array, grid::Grid{dim}, gridindices::CartesianInd
     if isempty(active_list)
         found = false
         for k in 1:num_generations*2
-            I₀ = set_point!(cells, random_point(rng, grid), grid)
+            I₀ = set_point!(cells, random_point(rng, partgrid), grid)
             if I₀ !== nothing
                 push!(active_list, I₀)
                 found = true
