@@ -118,7 +118,6 @@ function generate(rng, r, minmaxes::Vararg{Tuple{Real, Real}, n}; k::Int=30, par
     generate(rng, Grid(r/√n, minmaxes...), k, parallel)
 end
 
-# https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
 function generate(rng, grid::Grid{dim}, num_generations::Int, parallel::Bool) where {dim}
     cells = fill(nanvec(Vec{dim, Float64}), size(grid).-1)
     if parallel && Threads.nthreads() > 1
@@ -133,6 +132,7 @@ function generate(rng, grid::Grid{dim}, num_generations::Int, parallel::Bool) wh
     filter!(!isnanvec, vec(cells))
 end
 
+# https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
 function generate!(rng, cells::Array, grid::Grid{dim}, gridindices::CartesianIndices, num_generations::Int) where {dim}
     partgrid = partition(grid, gridindices)
     cellindices = first(gridindices):(last(gridindices) - oneunit(CartesianIndex{dim}))
