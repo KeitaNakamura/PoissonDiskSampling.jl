@@ -7,14 +7,14 @@ const BLOCKFACTOR = unsigned(3) # 2^3
 const Vec{dim, T} = NTuple{dim, T}
 
 """
-    Grid(dx, (min_1, max_1)..., (min_n, max_n))
+    Grid(r, (min_1, max_1)..., (min_n, max_n))
 
 Construct grid with the domain ``[min_1, max_1)`` ... ``[min_n, max_n)``,
-where ``max_n`` could be changed due to the grid spacing `dx`.
+where ``max_n`` could be changed based on the minimum distance `r` between samples.
 """
 struct Grid{dim}
-    dx::Float64
     r::Float64
+    dx::Float64
     min::NTuple{dim, Float64}
     max::NTuple{dim, Float64}
     size::NTuple{dim, Int}
@@ -23,12 +23,11 @@ end
 Base.size(grid::Grid) = grid.size
 @inline sampling_distance(grid::Grid) = grid.r
 
-function Grid(dx::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {n}
+function Grid(r::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {n}
     all(minmax->minmax[1]<minmax[2], minmaxes) || throw(ArgumentError("`(min, max)` must be `min < max`"))
+    dx = r/√n
     axes = map(minmax->minmax[1]:dx:minmax[2], minmaxes)
-    min = map(first, axes)
-    max = map(last, axes)
-    Grid{n}(dx, dx*√n, min, max, map(length, axes), zero(CartesianIndex{n}))
+    Grid{n}(r, dx, map(first, axes), map(last, axes), map(length, axes), zero(CartesianIndex{n}))
 end
 
 function whichcell(x::Vec, grid::Grid)
@@ -114,8 +113,8 @@ See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* fo
 function generate(r::Real, minmaxes::Vararg{Tuple{Real, Real}}; k::Int=30, parallel::Bool=true)
     generate(Random.GLOBAL_RNG, r, minmaxes...; k, parallel)
 end
-function generate(rng, r, minmaxes::Vararg{Tuple{Real, Real}, n}; k::Int=30, parallel::Bool=true) where {n}
-    generate(rng, Grid(r/√n, minmaxes...), k, parallel)
+function generate(rng, r, minmaxes::Vararg{Tuple{Real, Real}}; k::Int=30, parallel::Bool=true)
+    generate(rng, Grid(r, minmaxes...), k, parallel)
 end
 
 function generate(rng, grid::Grid{dim}, num_generations::Int, parallel::Bool) where {dim}
