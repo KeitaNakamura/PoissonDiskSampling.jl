@@ -176,19 +176,24 @@ function set_point!(cells, xₖ, grid)
     Iₖ === nothing && return nothing
     u = 2*oneunit(Iₖ)
     neighborcells = CartesianIndices(cells) ∩ ((Iₖ-u):(Iₖ+u))
-    valid = all(neighborcells) do cellindex
-        x = cells[cellindex]
-        isnanvec(x) && return true
-        sum(abs2, xₖ .- x) > abs2(sampling_distance(grid))
-    end
-    if valid
-        @assert isnanvec(cells[Iₖ])
+    if is_validpoint(xₖ, sampling_distance(grid), neighborcells, cells)
+        # @assert isnanvec(cells[Iₖ])
         cells[Iₖ] = xₖ
         return Iₖ
     end
     nothing
 end
 
+function is_validpoint(xₖ, r, neighborcells, cells)
+    valid = true
+    @inbounds @simd for cellindex in neighborcells
+        x = cells[cellindex]
+        valid *= ifelse(isnanvec(x), true, square_sum(xₖ, x) > r^2)
+    end
+    valid
+end
+
+@inline square_sum(x, y) = sum(@. (x-y)^2)
 @inline nanvec(::Type{Vec{dim, T}}) where {dim, T} = Vec{dim, T}(ntuple(i->NaN, Val(dim)))
 @inline isnanvec(x::Vec) = x === nanvec(typeof(x))
 
