@@ -1,10 +1,26 @@
 using PoissonDiskSampling
+using PoissonDiskSampling: Grid
 using Test
 using Random
 using StableRNGs
 
-@testset "Misc" begin
-    @testset "Spherical coordinates" begin
+@testset "misc" begin
+    @testset "Grid" begin
+        for T in (Float64, Float32)
+            min, max = (0, 1)
+            r = 0.1
+            dx = r/√2
+            ax = 0:dx:1
+            grid = (@inferred Grid(T, r, (min,max), (min,max)))::Grid{2, T}
+            @test grid.r == T(r)
+            @test grid.dx == T(dx)
+            @test grid.min == map(T, ntuple(i->first(ax), 2))
+            @test grid.max == map(T, ntuple(i->last(ax), 2))
+            @test grid.size == ntuple(i->length(ax), 2)
+            @test grid.offset == zero(CartesianIndex{2})
+        end
+    end
+    @testset "spherical coordinates" begin
         Random.seed!(1234)
         # circle
         n = 2
@@ -34,36 +50,41 @@ using StableRNGs
     end
 end
 
-@testset "PoissonDiskSampling" begin
+@testset "generate" begin
     # generate
-    for parallel in (false, true)
-        Random.seed!(1234)
-        r = rand()
-        for minmaxes in (((0,6), (-2,3)),
-                         ((0,6), (-2,3), (0,2)),
-                         ((0,6), (-2,3), (0,2), (-1,2)))
-            dx = r / sqrt(length(minmaxes))
-            pts = PoissonDiskSampling.generate(r, minmaxes...; parallel)
-            # Check the distance between samples
-            @test all(pts) do pt
-                all(pts) do x
-                    x === pt && return true
-                    sum(abs2, pt .- x) > abs2(r)
+    for T in (Float32, Float64)
+        for parallel in (false, true)
+            Random.seed!(1234)
+            r = rand()
+            for minmaxes in (((0,6), (-2,3)),
+                             ((0,6), (-2,3), (0,2)),
+                             ((0,6), (-2,3), (0,2), (-1,2)))
+                n = length(minmaxes)
+                dx = r / sqrt(n)
+                pts = (@inferred PoissonDiskSampling.generate(T, r, minmaxes...; parallel))::Vector{NTuple{n, T}}
+                # Check the distance between samples
+                @test all(pts) do pt
+                    all(pts) do x
+                        x === pt && return true
+                        sum(abs2, pt .- x) > abs2(r)
+                    end
                 end
+                # Check if samples are uniformly distributed by calculating mean value of coordiantes.
+                # The mean value should be almost the same as the centroid of the domain
+                mean = collect(reduce(.+, pts)./length(pts))
+                centroid = collect(map(x->(x[1]+x[2])/2, minmaxes))
+                @test mean ≈ centroid atol=r
             end
-            # Check if samples are uniformly distributed by calculating mean value of coordiantes.
-            # The mean value should be almost the same as the centroid of the domain
-            mean = collect(reduce(.+, pts)./length(pts))
-            centroid = collect(map(x->(x[1]+x[2])/2, minmaxes))
-            @test mean ≈ centroid atol=r
+            # errors
+            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6); parallel)                # wrong dimension
+            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (3,-2); parallel)        # wrong (min, max)
+            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); parallel) # wrong (min, max)
         end
-        # errors
-        @test_throws Exception PoissonDiskSampling.generate(r, (0,6); parallel)                # wrong dimension
-        @test_throws Exception PoissonDiskSampling.generate(r, (0,6), (3,-2); parallel)        # wrong (min, max)
-        @test_throws Exception PoissonDiskSampling.generate(r, (0,6), (-2,3), (2,0); parallel) # wrong (min, max)
+        # StableRNG
+        rng = StableRNG(1234)
+        pts = (@inferred PoissonDiskSampling.generate(rng, T, rand(rng), (0,8), (0,10); parallel=false))::Vector{NTuple{2, T}}
+        centroid = collect(reduce(.+, pts) ./ length(pts))
+        T == Float64 && @test centroid ≈ [3.8345015153218833, 4.83758270027716]
+        T == Float32 && @test centroid ≈ [3.9360082f0, 4.9248857f0]
     end
-    # StableRNG
-    rng = StableRNG(1234)
-    pts = PoissonDiskSampling.generate(rng, rand(rng), (0,8), (0,10); parallel=false)
-    @test collect(reduce(.+, pts) ./ length(pts)) ≈ [3.8345015153218833, 4.83758270027716]
 end

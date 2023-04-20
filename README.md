@@ -20,12 +20,16 @@ pkg> add https://github.com/KeitaNakamura/PoissonDiskSampling.jl.git
 See `?PoissonDiskSampling.generate` for details.
 
 ```julia
-julia> using PoissonDiskSampling, Plots
+julia> using PoissonDiskSampling
 
-julia> points = PoissonDiskSampling.generate(0.1, (0,5), (0,3));
+julia> r = 0.1 # minimum distance between samples
+
+julia> points = PoissonDiskSampling.generate(r, (0,5), (0,3));
 
 julia> typeof(points)
 Vector{Tuple{Float64, Float64}} (alias for Array{Tuple{Float64, Float64}, 1})
+
+julia> using Plots
 
 julia> scatter(points)
 ```

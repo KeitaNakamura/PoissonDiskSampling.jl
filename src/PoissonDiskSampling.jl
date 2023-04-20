@@ -7,31 +7,30 @@ const BLOCKFACTOR = unsigned(3) # 2^3
 const Vec{dim, T} = NTuple{dim, T}
 
 """
-    Grid(dx, (min_1, max_1)..., (min_n, max_n))
+    Grid(r, (min_1, max_1)..., (min_n, max_n))
 
 Construct grid with the domain ``[min_1, max_1)`` ... ``[min_n, max_n)``,
-where ``max_n`` could be changed due to the grid spacing `dx`.
+where ``max_n`` could be changed based on the minimum distance `r` between samples.
 """
-struct Grid{dim}
-    dx::Float64
-    r::Float64
-    min::NTuple{dim, Float64}
-    max::NTuple{dim, Float64}
+struct Grid{dim, T}
+    r::T
+    dx::T
+    min::NTuple{dim, T}
+    max::NTuple{dim, T}
     size::NTuple{dim, Int}
     offset::CartesianIndex{dim}
 end
 Base.size(grid::Grid) = grid.size
 @inline sampling_distance(grid::Grid) = grid.r
 
-function Grid(dx::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {n}
+function Grid(::Type{T}, r::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {T, n}
     all(minmax->minmax[1]<minmax[2], minmaxes) || throw(ArgumentError("`(min, max)` must be `min < max`"))
+    dx = r/√n
     axes = map(minmax->minmax[1]:dx:minmax[2], minmaxes)
-    min = map(first, axes)
-    max = map(last, axes)
-    Grid{n}(dx, dx*√n, min, max, map(length, axes), zero(CartesianIndex{n}))
+    Grid{n, T}(r, dx, map(first, axes), map(last, axes), map(length, axes), zero(CartesianIndex{n}))
 end
 
-function whichcell(x::Vec, grid::Grid)
+function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
     xmin = grid.min
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
@@ -40,9 +39,9 @@ function whichcell(x::Vec, grid::Grid)
     grid.offset + CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
 end
 
-function random_point(rng, grid::Grid)
+function random_point(rng, grid::Grid{dim, T}) where {dim, T}
     map(grid.min, grid.max) do xmin, xmax
-        xmin + rand(rng) * (xmax - xmin)
+        xmin + rand(rng, T) * (xmax - xmin)
     end
 end
 
@@ -72,55 +71,53 @@ function blockpartition(grid::Grid{dim}, blk::CartesianIndex{dim}) where {dim}
     partition(grid, gridindices_from_blockindex(grid, blk))
 end
 
-struct Annulus{dim}
-    centroid::Vec{dim, Float64}
-    r1::Float64
-    r2::Float64
+struct Annulus{dim, T}
+    centroid::Vec{dim, T}
+    r1::T
+    r2::T
 end
 
-function random_point(rng, annulus::Annulus{n}) where {n}
+function random_point(rng, annulus::Annulus{n, T}) where {n, T}
     n > 1 || throw(ArgumentError("dimensions must be ≥ 2"))
-    r = annulus.r1 + rand(rng) * (annulus.r2 - annulus.r1)
-    θs = ntuple(i->rand(rng)*ifelse(i==n-1, 2π, π), Val(n-1))
+    r = annulus.r1 + rand(rng, T) * (annulus.r2 - annulus.r1)
+    θs = ntuple(i -> rand(rng, T) * T(ifelse(i==n-1, 2π, π)), Val(n-1))
     map(+, annulus.centroid, spherical_coordinates(r, θs))
 end
 
 # https://en.wikipedia.org/wiki/N-sphere#Spherical_coordinates
-@inline function spherical_coordinates(r::Float64, θs::Tuple{Vararg{Float64}})
+@inline function spherical_coordinates(r::T, θs::Tuple{Vararg{T}}) where {T}
     broadcast(*, (r,), coords_sin(θs), coords_cos(θs))
 end
-@inline coords_sin(::Tuple{}) = (1.0,)
-@inline function coords_sin(θs::Tuple{Vararg{Float64}})
+@inline coords_sin(::Tuple{}) = (1,)
+@inline function coords_sin(θs::Tuple{Vararg{T}}) where {T}
     xs = coords_sin(Base.front(θs))
     xlast = xs[end] * sin(θs[end])
     (xs..., xlast)
 end
-@inline function coords_cos(θs::Tuple{Vararg{Float64}})
-    (map(cos, θs)..., 1.0)
+@inline function coords_cos(θs::Tuple{Vararg{T}}) where {T}
+    (map(cos, θs)..., one(T))
 end
 
 """
-    PoissonDiskSampling.generate(r, (min_1, max_1)..., (min_n, max_n); k = 30, parallel = true)
+    PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k = 30, parallel = true)
 
-Geneate coordinates based on the Poisson disk sampling.
+Geneate points based on the Poisson disk sampling.
 
 The domain must be rectangle as ``[min_1, max_1)`` ... ``[min_n, max_n)``.
-`r` is the minimum distance between samples. `k` is the number of trials for sampling at
-each smaple, i.e., the algorithm will give up if no valid sample is found after `k` trials.
+`r` is the minimum distance between samples. `k` is the number of trials for sampling,
+i.e., the algorithm will give up if no valid sample is found after `k` trials.
 If `Threads.nthreads() > 1 && parallel`, multithreading is enabled.
 
-See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* for more details.
+The algorithm is based on *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf*.
 """
-function generate(r::Real, minmaxes::Vararg{Tuple{Real, Real}}; k::Int=30, parallel::Bool=true)
-    generate(Random.GLOBAL_RNG, r, minmaxes...; k, parallel)
-end
-function generate(rng, r, minmaxes::Vararg{Tuple{Real, Real}, n}; k::Int=30, parallel::Bool=true) where {n}
-    generate(rng, Grid(r/√n, minmaxes...), k, parallel)
-end
+generate(args...; k::Int=30, parallel::Bool=true) = _generate(args...; k, parallel)
+_generate(rng, ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel) where {T} = generate(rng, Grid(T, r, minmaxes...), k, parallel)
+_generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, parallel)           = _generate(rng,               Float64, r, minmaxes...; k, parallel)
+_generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel) where {T} = _generate(Random.GLOBAL_RNG, T,       r, minmaxes...; k, parallel)
+_generate(                r, minmaxes::Tuple{Real, Real}...; k, parallel)           = _generate(Random.GLOBAL_RNG,          r, minmaxes...; k, parallel)
 
-# https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
-function generate(rng, grid::Grid{dim}, num_generations::Int, parallel::Bool) where {dim}
-    cells = fill(nanvec(Vec{dim, Float64}), size(grid).-1)
+function generate(rng, grid::Grid{dim, T}, num_generations::Int, parallel::Bool) where {dim, T}
+    cells = fill(nanvec(Vec{dim, T}), size(grid).-1)
     if parallel && Threads.nthreads() > 1
         for blocks in threadsafe_blocks(blocksize(grid))
             Threads.@threads :static for blk in blocks
@@ -133,7 +130,8 @@ function generate(rng, grid::Grid{dim}, num_generations::Int, parallel::Bool) wh
     filter!(!isnanvec, vec(cells))
 end
 
-function generate!(rng, cells::Array, grid::Grid{dim}, gridindices::CartesianIndices, num_generations::Int) where {dim}
+# https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
+function generate!(rng, cells::Array{Vec{dim, T}}, grid::Grid{dim, T}, gridindices::CartesianIndices, num_generations::Int) where {dim, T}
     partgrid = partition(grid, gridindices)
     cellindices = first(gridindices):(last(gridindices) - oneunit(CartesianIndex{dim}))
 
