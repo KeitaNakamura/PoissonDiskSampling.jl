@@ -101,14 +101,14 @@ end
 """
     PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k = 30, parallel = true)
 
-Geneate coordinates based on the Poisson disk sampling.
+Geneate points based on the Poisson disk sampling.
 
 The domain must be rectangle as ``[min_1, max_1)`` ... ``[min_n, max_n)``.
-`r` is the minimum distance between samples. `k` is the number of trials for sampling at
-each smaple, i.e., the algorithm will give up if no valid sample is found after `k` trials.
+`r` is the minimum distance between samples. `k` is the number of trials for sampling,
+i.e., the algorithm will give up if no valid sample is found after `k` trials.
 If `Threads.nthreads() > 1 && parallel`, multithreading is enabled.
 
-See *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf* for more details.
+The algorithm is based on *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf*.
 """
 generate(args...; k::Int=30, parallel::Bool=true) = _generate(args...; k, parallel)
 _generate(rng, ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel) where {T} = generate(rng, Grid(T, r, minmaxes...), k, parallel)
