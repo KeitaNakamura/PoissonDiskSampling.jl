@@ -2,6 +2,7 @@ module PoissonDiskSampling
 
 using Base.Iterators: product
 using Random
+using StableRNGs
 
 const BLOCKFACTOR = unsigned(3) # 2^3
 const Vec{dim, T} = NTuple{dim, T}
@@ -116,12 +117,15 @@ _generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, parallel)       
 _generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel) where {T} = _generate(Random.GLOBAL_RNG, T,       r, minmaxes...; k, parallel)
 _generate(                r, minmaxes::Tuple{Real, Real}...; k, parallel)           = _generate(Random.GLOBAL_RNG,          r, minmaxes...; k, parallel)
 
+get_threads_rngs(rng) = fill(rng, Threads.nthreads())
+get_threads_rngs(rng::StableRNG) = [copy(rng) for _ in 1:Threads.nthreads()]
 function generate(rng, grid::Grid{dim, T}, num_generations::Int, parallel::Bool) where {dim, T}
     cells = fill(nanvec(Vec{dim, T}), size(grid).-1)
     if parallel && Threads.nthreads() > 1
+        rngs = get_threads_rngs(rng)
         for blocks in threadsafe_blocks(blocksize(grid))
             Threads.@threads :static for blk in blocks
-                generate!(rng, cells, grid, gridindices_from_blockindex(grid, blk), num_generations)
+                generate!(rngs[Threads.threadid()], cells, grid, gridindices_from_blockindex(grid, blk), num_generations)
             end
         end
     else
