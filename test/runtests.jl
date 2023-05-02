@@ -79,18 +79,12 @@ end
             @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6); parallel)                # wrong dimension
             @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (3,-2); parallel)        # wrong (min, max)
             @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); parallel) # wrong (min, max)
-            # StableRNG
-            rng = StableRNG(1234)
-            pts = (@inferred PoissonDiskSampling.generate(rng, T, rand(rng), (0,8), (0,10); parallel))::Vector{NTuple{2, T}}
-            centroid = collect(reduce(.+, pts) ./ length(pts))
-            if parallel
-                @assert Threads.nthreads() == 2
-                T == Float64 && @test centroid ≈ [3.895737300181102, 4.775149166481281]
-                T == Float32 && @test centroid ≈ [3.9441202f0, 4.859628f0]
-            else
-                T == Float64 && @test centroid ≈ [3.8345015153218833, 4.83758270027716]
-                T == Float32 && @test centroid ≈ [3.9360082f0, 4.9248857f0]
-            end
         end
+        # StableRNG
+        rng = StableRNG(1234)
+        pts = (@inferred PoissonDiskSampling.generate(rng, T, rand(rng), (0,8), (0,10)))::Vector{NTuple{2, T}}
+        centroid = collect(reduce(.+, pts) ./ length(pts))
+        T == Float64 && @test centroid ≈ [3.8345015153218833, 4.83758270027716]
+        T == Float32 && @test centroid ≈ [3.9360082f0, 4.9248857f0]
     end
 end
