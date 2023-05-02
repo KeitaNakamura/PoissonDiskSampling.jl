@@ -121,9 +121,9 @@ The algorithm is based on *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph
 """
 generate(args...; k::Int=30, kwargs...) = _generate(args...; k, kwargs...)
 _generate(rng, ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel=false) where {T} = generate(rng, Grid(T, r, minmaxes...), k, parallel)
-_generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, parallel=false)           = _generate(rng,               Float64, r, minmaxes...; k, parallel)
-_generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel=true ) where {T} = _generate(Random.GLOBAL_RNG, T,       r, minmaxes...; k, parallel)
-_generate(                r, minmaxes::Tuple{Real, Real}...; k, parallel=true )           = _generate(Random.GLOBAL_RNG,          r, minmaxes...; k, parallel)
+_generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, parallel=false)           = _generate(rng,                  Float64, r, minmaxes...; k, parallel)
+_generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel=true ) where {T} = _generate(Random.default_rng(), T,       r, minmaxes...; k, parallel)
+_generate(                r, minmaxes::Tuple{Real, Real}...; k, parallel=true )           = _generate(Random.default_rng(),          r, minmaxes...; k, parallel)
 
 function generate(rng, grid::Grid{dim, T}, num_generations::Int, parallel::Bool) where {dim, T}
     cells = fill(nanvec(Vec{dim, T}), size(grid).-1)
