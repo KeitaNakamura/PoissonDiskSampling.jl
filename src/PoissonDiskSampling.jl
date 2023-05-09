@@ -187,12 +187,14 @@ function is_validpoint(xₖ, r, neighborcells, cells)
     valid = true
     @inbounds @simd for cellindex in neighborcells
         x = cells[cellindex]
-        valid *= ifelse(isnanvec(x), true, square_sum(xₖ, x) > r^2)
+        valid *= !(square_sum(xₖ.-x) ≤ r^2)
     end
     valid
 end
 
-@inline square_sum(x, y) = sum(@. (x-y)^2)
+@inline square_sum(x::Vec{2}) = muladd(x[1], x[1], x[2]*x[2])
+@inline square_sum(x::Vec{3}) = muladd(x[1], x[1], muladd(x[2], x[2], x[3]*x[3]))
+@inline square_sum(x) = sum(x.^2)
 @inline nanvec(::Type{Vec{dim, T}}) where {dim, T} = Vec{dim, T}(ntuple(i->NaN, Val(dim)))
 @inline isnanvec(x::Vec) = x === nanvec(typeof(x))
 
