@@ -3,7 +3,7 @@ module PoissonDiskSampling
 using Base.Iterators: product
 using Random
 
-const BLOCKFACTOR = unsigned(3) # 2^3
+const BLOCKFACTOR = unsigned(2) # 2^2
 const Vec{dim, T} = NTuple{dim, T}
 
 """
