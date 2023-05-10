@@ -147,7 +147,7 @@ function generate!(rng, cells::Array{Vec{dim, T}}, grid::Grid{dim, T}, gridindic
     active_list = filter(i->!isnanvec(cells[i]), cellindices)
     if isempty(active_list)
         found = false
-        for k in 1:num_generations*2
+        for k in 1:num_generations
             I₀ = set_point!(cells, random_point(rng, partgrid), grid)
             if I₀ !== nothing
                 push!(active_list, I₀)
