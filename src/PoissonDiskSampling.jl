@@ -39,6 +39,16 @@ function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
     grid.offset + CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
 end
 
+function neighborcells(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
+    xmin = grid.min
+    dx⁻¹ = inv(grid.dx)
+    ξ = @. (x - xmin) * dx⁻¹
+    r = grid.r * dx⁻¹
+    start = CartesianIndex(@. unsafe_trunc(Int, floor(ξ - r)) + 1)
+    stop  = CartesianIndex(@. unsafe_trunc(Int, floor(ξ + r)) + 1)
+    CartesianIndices(size(grid).-1) ∩ (start:stop)
+end
+
 function random_point(rng, grid::Grid{dim, T}) where {dim, T}
     map(grid.min, grid.max) do xmin, xmax
         xmin + rand(rng, T) * (xmax - xmin)
@@ -173,9 +183,7 @@ end
 function set_point!(cells, xₖ, grid)
     Iₖ = whichcell(xₖ, grid)
     Iₖ === nothing && return nothing
-    u = 2*oneunit(Iₖ)
-    neighborcells = CartesianIndices(cells) ∩ ((Iₖ-u):(Iₖ+u))
-    if is_validpoint(xₖ, sampling_distance(grid), neighborcells, cells)
+    if is_validpoint(xₖ, sampling_distance(grid), neighborcells(xₖ, grid), cells)
         # @assert isnanvec(cells[Iₖ])
         cells[Iₖ] = xₖ
         return Iₖ
