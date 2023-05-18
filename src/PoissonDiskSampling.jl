@@ -26,8 +26,10 @@ Base.size(grid::Grid) = grid.dims
 function Grid(::Type{T}, r::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {T, n}
     all(minmax->minmax[1]<minmax[2], minmaxes) || throw(ArgumentError("`(min, max)` must be `min < max`"))
     dx = r/√n
-    axes = map(minmax->minmax[1]:dx:minmax[2], minmaxes)
-    Grid{n, T}(r, dx, map(first, axes), map(last, axes), map(length, axes), zero(CartesianIndex{n}))
+    xmin = map(first, minmaxes)
+    xmax = map(last, minmaxes)
+    dims = @. ceil(Int, (xmax - xmin) / dx) + 1
+    Grid{n, T}(r, dx, xmin, xmax, dims, zero(CartesianIndex{n}))
 end
 
 function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
