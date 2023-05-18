@@ -23,12 +23,12 @@ end
 Base.size(grid::Grid) = grid.dims
 @inline sampling_distance(grid::Grid) = grid.r
 
-function Grid(::Type{T}, r::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {T, n}
-    all(minmax->minmax[1]<minmax[2], minmaxes) || throw(ArgumentError("`(min, max)` must be `min < max`"))
+function Grid(::Type{T}, r::Real, minmax::Vararg{Tuple{Real, Real}, n}) where {T, n}
+    all(Base.splat(<), minmax) || throw(ArgumentError("`(min, max)` must be `min < max`"))
     dx = r/√n
-    xmin = map(first, minmaxes)
-    xmax = map(last, minmaxes)
-    dims = @. ceil(Int, (xmax - xmin) / dx) + 1
+    xmin = getindex.(minmax, 1)
+    xmax = getindex.(minmax, 2)
+    dims = @. ceil(Int, (xmax-xmin)/dx) + 1
     Grid{n, T}(r, dx, xmin, xmax, dims, zero(CartesianIndex{n}))
 end
 
@@ -70,7 +70,7 @@ blocksize(gridsize::Tuple{Vararg{Int}}) = @. (gridsize-1)>>BLOCKFACTOR+1
 blocksize(grid::Grid) = blocksize(size(grid))
 function threadsafe_blocks(blocksize::NTuple{dim, Int}) where {dim}
     starts = product(ntuple(i->1:2, Val(dim))...)
-    vec(map(st -> map(CartesianIndex{dim}, Iterators.product(StepRange.(st, 2, blocksize)...))::Array{CartesianIndex{dim}, dim}, starts))
+    vec(map(st -> map(CartesianIndex{dim}, product(StepRange.(st, 2, blocksize)...))::Array{CartesianIndex{dim}, dim}, starts))
 end
 function gridindices_from_blockindex(grid::Grid, blk::CartesianIndex)
     start = @. (blk.I-1) << BLOCKFACTOR + 1
