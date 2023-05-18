@@ -31,11 +31,10 @@ function Grid(::Type{T}, r::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where 
 end
 
 function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
-    xmin = grid.xmin
+    xmin, xmax = grid.xmin, grid.xmax
+    all(@. xmin ≤ x < xmax) || return nothing
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
-    ncells = size(grid) .- 1
-    all(@. 0 ≤ ξ < ncells) || return nothing # use `<` because of `floor`
     grid.offset + CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
 end
 
