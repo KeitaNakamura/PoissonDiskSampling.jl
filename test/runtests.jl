@@ -14,9 +14,9 @@ using StableRNGs
             grid = (@inferred Grid(T, r, (min,max), (min,max)))::Grid{2, T}
             @test grid.r == T(r)
             @test grid.dx == T(dx)
-            @test grid.min == map(T, ntuple(i->first(ax), 2))
-            @test grid.max == map(T, ntuple(i->last(ax), 2))
-            @test grid.size == ntuple(i->length(ax), 2)
+            @test grid.xmin == map(T, ntuple(i->first(ax), 2))
+            @test grid.xmax == map(T, ntuple(i->last(ax), 2))
+            @test grid.dims == ntuple(i->length(ax), 2)
             @test grid.offset == zero(CartesianIndex{2})
         end
     end

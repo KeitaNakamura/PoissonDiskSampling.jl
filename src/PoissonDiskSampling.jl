@@ -15,12 +15,12 @@ where ``max_n`` could be changed based on the minimum distance `r` between sampl
 struct Grid{dim, T}
     r::T
     dx::T
-    min::NTuple{dim, T}
-    max::NTuple{dim, T}
-    size::NTuple{dim, Int}
+    xmin::NTuple{dim, T}
+    xmax::NTuple{dim, T}
+    dims::NTuple{dim, Int}
     offset::CartesianIndex{dim}
 end
-Base.size(grid::Grid) = grid.size
+Base.size(grid::Grid) = grid.dims
 @inline sampling_distance(grid::Grid) = grid.r
 
 function Grid(::Type{T}, r::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {T, n}
@@ -31,7 +31,7 @@ function Grid(::Type{T}, r::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where 
 end
 
 function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
-    xmin = grid.min
+    xmin = grid.xmin
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
     ncells = size(grid) .- 1
@@ -40,7 +40,7 @@ function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
 end
 
 function neighborcells(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
-    xmin = grid.min
+    xmin = grid.xmin
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
     r = grid.r * dx⁻¹
@@ -50,7 +50,7 @@ function neighborcells(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
 end
 
 function random_point(rng, grid::Grid{dim, T}) where {dim, T}
-    map(grid.min, grid.max) do xmin, xmax
+    map(grid.xmin, grid.xmax) do xmin, xmax
         xmin + rand(rng, T) * (xmax - xmin)
     end
 end
@@ -59,8 +59,8 @@ function partition(grid::Grid{dim}, CI::CartesianIndices{dim}) where {dim}
     @boundscheck checkbounds(CartesianIndices(size(grid)), CI)
     Imin = first(CI).I
     Imax = last(CI).I
-    new_min = @. grid.min + grid.dx * (Imin - 1)
-    new_max = @. grid.min + grid.dx * (Imax - 1)
+    new_min = @. grid.xmin + grid.dx * (Imin - 1)
+    new_max = @. grid.xmin + grid.dx * (Imax - 1)
     Grid(grid.dx, grid.r, new_min, new_max, size(CI), CartesianIndex(Imin .- 1))
 end
 
