@@ -17,7 +17,6 @@ using StableRNGs
             @test grid.xmin == map(T, (xmin, ymin))
             @test grid.xmax == map(T, (xmax, ymax))
             @test grid.dims == (16,30)
-            @test grid.offset == zero(CartesianIndex{2})
         end
     end
     @testset "spherical coordinates" begin

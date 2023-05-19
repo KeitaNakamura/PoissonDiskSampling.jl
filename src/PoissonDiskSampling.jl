@@ -18,7 +18,6 @@ struct Grid{dim, T}
     xmin::NTuple{dim, T}
     xmax::NTuple{dim, T}
     dims::NTuple{dim, Int}
-    offset::CartesianIndex{dim}
 end
 Base.size(grid::Grid) = grid.dims
 @inline sampling_distance(grid::Grid) = grid.r
@@ -29,7 +28,7 @@ function Grid(::Type{T}, r::Real, minmax::Vararg{Tuple{Real, Real}, n}) where {T
     xmin = getindex.(minmax, 1)
     xmax = getindex.(minmax, 2)
     dims = @. ceil(Int, (xmax-xmin)/dx) + 1
-    Grid{n, T}(r, dx, xmin, xmax, dims, zero(CartesianIndex{n}))
+    Grid{n, T}(r, dx, xmin, xmax, dims)
 end
 
 function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
@@ -37,7 +36,7 @@ function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
     all(@. xmin ≤ x < xmax) || return nothing
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
-    grid.offset + CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
+    CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
 end
 
 function neighborcells(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
@@ -62,7 +61,7 @@ function partition(grid::Grid{dim}, CI::CartesianIndices{dim}) where {dim}
     Imax = last(CI).I
     new_min = @. grid.xmin + grid.dx * (Imin - 1)
     new_max = @. grid.xmin + grid.dx * (Imax - 1)
-    Grid(grid.dx, grid.r, new_min, new_max, size(CI), CartesianIndex(Imin .- 1))
+    Grid(grid.dx, grid.r, new_min, new_max, size(CI))
 end
 
 # block methods
