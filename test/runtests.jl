@@ -7,16 +7,16 @@ using StableRNGs
 @testset "misc" begin
     @testset "Grid" begin
         for T in (Float64, Float32)
-            min, max = (0, 1)
+            xmin, xmax = (0, 1)
+            ymin, ymax = (0, 2)
             r = 0.1
             dx = r/√2
-            ax = 0:dx:1
-            grid = (@inferred Grid(T, r, (min,max), (min,max)))::Grid{2, T}
+            grid = (@inferred Grid(T, r, (xmin,xmax), (ymin,ymax)))::Grid{2, T}
             @test grid.r == T(r)
             @test grid.dx == T(dx)
-            @test grid.min == map(T, ntuple(i->first(ax), 2))
-            @test grid.max == map(T, ntuple(i->last(ax), 2))
-            @test grid.size == ntuple(i->length(ax), 2)
+            @test grid.xmin == map(T, (xmin, ymin))
+            @test grid.xmax == map(T, (xmax, ymax))
+            @test grid.dims == (16,30)
             @test grid.offset == zero(CartesianIndex{2})
         end
     end
@@ -55,7 +55,7 @@ end
     for T in (Float32, Float64)
         for parallel in (false, true)
             Random.seed!(1234)
-            r = rand()
+            r = rand(T)
             for minmaxes in (((0,6), (-2,3)),
                              ((0,6), (-2,3), (0,2)),
                              ((0,6), (-2,3), (0,2), (-1,2)))
@@ -66,7 +66,7 @@ end
                 @test all(pts) do pt
                     all(pts) do x
                         x === pt && return true
-                        sum(abs2, pt .- x) > abs2(r)
+                        sum(@. (pt.-x)^2) > r^2
                     end
                 end
                 # Check if samples are uniformly distributed by calculating mean value of coordiantes.
@@ -84,7 +84,7 @@ end
         rng = StableRNG(1234)
         pts = (@inferred PoissonDiskSampling.generate(rng, T, rand(rng), (0,8), (0,10)))::Vector{NTuple{2, T}}
         centroid = collect(reduce(.+, pts) ./ length(pts))
-        T == Float64 && @test centroid ≈ [3.8345015153218833, 4.83758270027716]
-        T == Float32 && @test centroid ≈ [3.9360082f0, 4.9248857f0]
+        T == Float64 && @test centroid ≈ [4.0275421751736395, 4.957609421464297]
+        T == Float32 && @test centroid ≈ [4.090827f0, 5.0170517f0]
     end
 end

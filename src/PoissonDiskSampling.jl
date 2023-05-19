@@ -3,7 +3,7 @@ module PoissonDiskSampling
 using Base.Iterators: product
 using Random
 
-const BLOCKFACTOR = unsigned(2) # 2^2
+const BLOCKFACTOR = unsigned(3) # 2^3
 const Vec{dim, T} = NTuple{dim, T}
 
 """
@@ -15,32 +15,33 @@ where ``max_n`` could be changed based on the minimum distance `r` between sampl
 struct Grid{dim, T}
     r::T
     dx::T
-    min::NTuple{dim, T}
-    max::NTuple{dim, T}
-    size::NTuple{dim, Int}
+    xmin::NTuple{dim, T}
+    xmax::NTuple{dim, T}
+    dims::NTuple{dim, Int}
     offset::CartesianIndex{dim}
 end
-Base.size(grid::Grid) = grid.size
+Base.size(grid::Grid) = grid.dims
 @inline sampling_distance(grid::Grid) = grid.r
 
-function Grid(::Type{T}, r::Real, minmaxes::Vararg{Tuple{Real, Real}, n}) where {T, n}
-    all(minmax->minmax[1]<minmax[2], minmaxes) || throw(ArgumentError("`(min, max)` must be `min < max`"))
+function Grid(::Type{T}, r::Real, minmax::Vararg{Tuple{Real, Real}, n}) where {T, n}
+    all(Base.splat(<), minmax) || throw(ArgumentError("`(min, max)` must be `min < max`"))
     dx = r/√n
-    axes = map(minmax->minmax[1]:dx:minmax[2], minmaxes)
-    Grid{n, T}(r, dx, map(first, axes), map(last, axes), map(length, axes), zero(CartesianIndex{n}))
+    xmin = getindex.(minmax, 1)
+    xmax = getindex.(minmax, 2)
+    dims = @. ceil(Int, (xmax-xmin)/dx) + 1
+    Grid{n, T}(r, dx, xmin, xmax, dims, zero(CartesianIndex{n}))
 end
 
 function whichcell(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
-    xmin = grid.min
+    xmin, xmax = grid.xmin, grid.xmax
+    all(@. xmin ≤ x < xmax) || return nothing
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
-    ncells = size(grid) .- 1
-    all(@. 0 ≤ ξ < ncells) || return nothing # use `<` because of `floor`
     grid.offset + CartesianIndex(@. unsafe_trunc(Int, floor(ξ)) + 1)
 end
 
 function neighborcells(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
-    xmin = grid.min
+    xmin = grid.xmin
     dx⁻¹ = inv(grid.dx)
     ξ = @. (x - xmin) * dx⁻¹
     r = grid.r * dx⁻¹
@@ -50,7 +51,7 @@ function neighborcells(x::Vec{dim, T}, grid::Grid{dim, T}) where {dim, T}
 end
 
 function random_point(rng, grid::Grid{dim, T}) where {dim, T}
-    map(grid.min, grid.max) do xmin, xmax
+    map(grid.xmin, grid.xmax) do xmin, xmax
         xmin + rand(rng, T) * (xmax - xmin)
     end
 end
@@ -59,8 +60,8 @@ function partition(grid::Grid{dim}, CI::CartesianIndices{dim}) where {dim}
     @boundscheck checkbounds(CartesianIndices(size(grid)), CI)
     Imin = first(CI).I
     Imax = last(CI).I
-    new_min = @. grid.min + grid.dx * (Imin - 1)
-    new_max = @. grid.min + grid.dx * (Imax - 1)
+    new_min = @. grid.xmin + grid.dx * (Imin - 1)
+    new_max = @. grid.xmin + grid.dx * (Imax - 1)
     Grid(grid.dx, grid.r, new_min, new_max, size(CI), CartesianIndex(Imin .- 1))
 end
 
@@ -69,7 +70,7 @@ blocksize(gridsize::Tuple{Vararg{Int}}) = @. (gridsize-1)>>BLOCKFACTOR+1
 blocksize(grid::Grid) = blocksize(size(grid))
 function threadsafe_blocks(blocksize::NTuple{dim, Int}) where {dim}
     starts = product(ntuple(i->1:2, Val(dim))...)
-    vec(map(st -> map(CartesianIndex{dim}, Iterators.product(StepRange.(st, 2, blocksize)...))::Array{CartesianIndex{dim}, dim}, starts))
+    vec(map(st -> map(CartesianIndex{dim}, product(StepRange.(st, 2, blocksize)...))::Array{CartesianIndex{dim}, dim}, starts))
 end
 function gridindices_from_blockindex(grid::Grid, blk::CartesianIndex)
     start = @. (blk.I-1) << BLOCKFACTOR + 1
