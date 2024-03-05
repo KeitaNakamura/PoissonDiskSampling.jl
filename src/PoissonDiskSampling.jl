@@ -1,6 +1,5 @@
 module PoissonDiskSampling
 
-using Base.Iterators: product
 using Random
 
 const BLOCKFACTOR = unsigned(3) # 2^3
@@ -68,8 +67,8 @@ end
 blocksize(gridsize::Tuple{Vararg{Int}}) = @. (gridsize-1)>>BLOCKFACTOR+1
 blocksize(grid::Grid) = blocksize(size(grid))
 function threadsafe_blocks(blocksize::NTuple{dim, Int}) where {dim}
-    starts = product(ntuple(i->1:2, Val(dim))...)
-    vec(map(st -> map(CartesianIndex{dim}, product(StepRange.(st, 2, blocksize)...))::Array{CartesianIndex{dim}, dim}, starts))
+    starts = collect(Iterators.product(ntuple(i->1:2, Val(dim))...))
+    vec(map(st -> map(CartesianIndex{dim}, Iterators.product(StepRange.(st, 2, blocksize)...)), starts))
 end
 function gridindices_from_blockindex(grid::Grid, blk::CartesianIndex)
     start = @. (blk.I-1) << BLOCKFACTOR + 1
