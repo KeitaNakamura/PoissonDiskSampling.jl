@@ -8,8 +8,8 @@ const Vec{dim, T} = NTuple{dim, T}
 """
     Grid(r, (min_1, max_1)..., (min_n, max_n))
 
-Construct grid with the domain ``[min_1, max_1)`` ... ``[min_n, max_n)``,
-where ``max_n`` could be changed based on the minimum distance `r` between samples.
+Construct a grid with the domain ``[min_1, max_1)`` ... ``[min_n, max_n)``,
+where ``max_n`` may be changed based on the minimum distance `r` between samples.
 """
 struct Grid{dim, T}
     r::T
@@ -110,9 +110,9 @@ end
 """
     PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k = 30)
 
-Geneate points based on the Poisson disk sampling.
+Geneate points based on Poisson disk sampling.
 
-The domain must be rectangle as ``[min_1, max_1)`` ... ``[min_n, max_n)``.
+The domain must be rectangular, defined as ``[min_1, max_1)`` ... ``[min_n, max_n)``.
 `r` is the minimum distance between samples. `k` is the number of trials for sampling,
 i.e., the algorithm will give up if no valid sample is found after `k` trials.
 
