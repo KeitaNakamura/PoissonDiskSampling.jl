@@ -52,7 +52,7 @@ end
 @testset "generate" begin
     # generate
     for T in (Float32, Float64)
-        for parallel in (false, true)
+        for multithreading in (false, true)
             Random.seed!(1234)
             r = rand(T)
             for minmaxes in (((0,6), (-2,3)),
@@ -60,7 +60,7 @@ end
                              ((0,6), (-2,3), (0,2), (-1,2)))
                 n = length(minmaxes)
                 dx = r / sqrt(n)
-                pts = (@inferred PoissonDiskSampling.generate(T, r, minmaxes...; parallel))::Vector{NTuple{n, T}}
+                pts = (@inferred PoissonDiskSampling.generate(T, r, minmaxes...; multithreading))::Vector{NTuple{n, T}}
                 # Check the distance between samples
                 @test all(pts) do pt
                     all(pts) do x
@@ -75,9 +75,9 @@ end
                 @test mean ≈ centroid atol=r
             end
             # errors
-            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6); parallel)                # wrong dimension
-            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (3,-2); parallel)        # wrong (min, max)
-            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); parallel) # wrong (min, max)
+            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6); multithreading)                # wrong dimension
+            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (3,-2); multithreading)        # wrong (min, max)
+            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); multithreading) # wrong (min, max)
         end
         # StableRNG
         rng = StableRNG(1234)
