@@ -12,7 +12,7 @@
 ## Installation
 
 ```julia
-pkg> add https://github.com/KeitaNakamura/PoissonDiskSampling.jl.git
+pkg> add PoissonDiskSampling
 ```
 
 ## How to use
