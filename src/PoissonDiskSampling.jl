@@ -108,7 +108,7 @@ end
 end
 
 """
-    PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k = 30)
+    PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k=30, multithreading=false)
 
 Geneate points based on Poisson disk sampling.
 
@@ -118,15 +118,15 @@ i.e., the algorithm will give up if no valid sample is found after `k` trials.
 
 The algorithm is based on *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf*.
 """
-generate(args...; k::Int=30, parallel::Bool=false) = _generate(args...; k, parallel)
-_generate(rng, ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel) where {T} = generate(rng, Grid(T, r, minmaxes...), k, parallel)
-_generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, parallel)           = _generate(rng, Float64, r, minmaxes...; k, parallel)
-_generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, parallel) where {T} = _generate(Random.default_rng(), T, r, minmaxes...; k, parallel)
-_generate(                r, minmaxes::Tuple{Real, Real}...; k, parallel)           = _generate(Random.default_rng(), r, minmaxes...; k, parallel)
+generate(args...; k::Int=30, multithreading::Bool=false) = _generate(args...; k, multithreading)
+_generate(rng, ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, multithreading) where {T} = generate(rng, Grid(T, r, minmaxes...), k, multithreading)
+_generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, multithreading)           = _generate(rng, Float64, r, minmaxes...; k, multithreading)
+_generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, multithreading) where {T} = _generate(Random.default_rng(), T, r, minmaxes...; k, multithreading)
+_generate(                r, minmaxes::Tuple{Real, Real}...; k, multithreading)           = _generate(Random.default_rng(), r, minmaxes...; k, multithreading)
 
-function generate(rng, grid::Grid{dim, T}, num_generations::Int, parallel::Bool) where {dim, T}
+function generate(rng, grid::Grid{dim, T}, num_generations::Int, multithreading::Bool) where {dim, T}
     cells = fill(nanvec(Vec{dim, T}), size(grid).-1)
-    if parallel && Threads.nthreads() > 1
+    if multithreading && Threads.nthreads() > 1
         for blocks in threadsafe_blocks(blocksize(grid))
             Threads.@threads :static for blk in blocks
                 generate!(rng, cells, grid, gridindices_from_blockindex(grid, blk), num_generations)
