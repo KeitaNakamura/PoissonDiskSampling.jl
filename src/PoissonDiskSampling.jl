@@ -128,7 +128,7 @@ function generate(rng, grid::Grid{dim, T}, num_generations::Int, multithreading:
     cells = fill(nanvec(Vec{dim, T}), size(grid).-1)
     if multithreading && Threads.nthreads() > 1
         for blocks in threadsafe_blocks(blocksize(grid))
-            Threads.@threads :static for blk in blocks
+            Threads.@threads for blk in blocks
                 generate!(rng, cells, grid, gridindices_from_blockindex(grid, blk), num_generations)
             end
         end
