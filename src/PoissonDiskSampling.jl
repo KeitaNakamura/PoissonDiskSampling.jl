@@ -60,7 +60,7 @@ function partition(grid::Grid{dim}, CI::CartesianIndices{dim}) where {dim}
     Imax = last(CI).I
     new_min = @. grid.xmin + grid.dx * (Imin - 1)
     new_max = @. grid.xmin + grid.dx * (Imax - 1)
-    Grid(grid.dx, grid.r, new_min, new_max, size(CI))
+    Grid(grid.r, grid.dx, new_min, new_max, size(CI))
 end
 
 # block methods

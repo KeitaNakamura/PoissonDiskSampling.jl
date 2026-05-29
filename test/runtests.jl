@@ -17,6 +17,9 @@ using StableRNGs
             @test grid.xmin == map(T, (xmin, ymin))
             @test grid.xmax == map(T, (xmax, ymax))
             @test grid.dims == (16,30)
+            part = PoissonDiskSampling.partition(grid, CartesianIndices((3:7, 5:9)))
+            @test part.r == grid.r
+            @test part.dx == grid.dx
         end
     end
     @testset "spherical coordinates" begin
