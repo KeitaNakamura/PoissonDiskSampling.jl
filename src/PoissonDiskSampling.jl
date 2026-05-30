@@ -88,9 +88,19 @@ end
 
 function random_point(rng, annulus::Annulus{n, T}) where {n, T}
     n > 1 || throw(ArgumentError("dimensions must be ≥ 2"))
-    r = annulus.r1 + rand(rng, T) * (annulus.r2 - annulus.r1)
-    θs = ntuple(i -> rand(rng, T) * T(ifelse(i==n-1, 2π, π)), Val(n-1))
-    map(+, annulus.centroid, spherical_coordinates(r, θs))
+    r = (annulus.r1^n + rand(rng, T) * (annulus.r2^n - annulus.r1^n)) ^ inv(T(n))
+    direction = random_unit_vector(rng, Vec{n, T})
+    map(annulus.centroid, direction) do x, d
+        x + r * d
+    end
+end
+
+function random_unit_vector(rng, ::Type{Vec{n, T}}) where {n, T}
+    while true
+        direction = ntuple(_ -> randn(rng, T), Val(n))
+        norm² = square_sum(direction)
+        norm² > zero(T) && return direction .* inv(sqrt(norm²))
+    end
 end
 
 # https://en.wikipedia.org/wiki/N-sphere#Spherical_coordinates
