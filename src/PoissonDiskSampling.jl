@@ -2,7 +2,7 @@ module PoissonDiskSampling
 
 using Random
 
-const BLOCKFACTOR = unsigned(3) # 2^3
+const MIN_BLOCK_LENGTH = 8
 const Vec{dim, T} = NTuple{dim, T}
 
 """
@@ -66,15 +66,23 @@ function partition(grid::Grid{dim}, CI::CartesianIndices{dim}) where {dim}
 end
 
 # block methods
-blocksize(gridsize::Tuple{Vararg{Int}}) = @. (gridsize-1)>>BLOCKFACTOR+1
+# Candidates can be written up to 2r outside a block. Same-phase blocks need
+# another r of separation so concurrent writes cannot violate the distance check.
+blocklength(::Val{dim}) where {dim} = max(2MIN_BLOCK_LENGTH, nextpow(2, ceil(Int, 5√dim)))
+blockfactor(::Val{dim}) where {dim} = trailing_zeros(blocklength(Val(dim)))
+blocklength(grid::Grid{dim}) where {dim} = blocklength(Val(dim))
+blockfactor(grid::Grid{dim}) where {dim} = blockfactor(Val(dim))
+blocksize(gridsize::NTuple{dim, Int}) where {dim} = @. ((gridsize - 2) >> blockfactor(Val(dim))) + 1
 blocksize(grid::Grid) = blocksize(size(grid))
 function threadsafe_blocks(blocksize::NTuple{dim, Int}) where {dim}
     starts = collect(Iterators.product(ntuple(i->1:2, Val(dim))...))
     vec(map(st -> map(CartesianIndex{dim}, Iterators.product(StepRange.(st, 2, blocksize)...)), starts))
 end
-function gridindices_from_blockindex(grid::Grid, blk::CartesianIndex)
-    start = @. (blk.I-1) << BLOCKFACTOR + 1
-    stop = @. start + (1 << BLOCKFACTOR)
+function gridindices_from_blockindex(grid::Grid{dim}, blk::CartesianIndex{dim}) where {dim}
+    factor = blockfactor(grid)
+    len = 1 << factor
+    start = @. ((blk.I - 1) << factor) + 1
+    stop = @. start + len
     (CartesianIndex(start):CartesianIndex(stop)) ∩ CartesianIndices(size(grid))
 end
 function blockpartition(grid::Grid{dim}, blk::CartesianIndex{dim}) where {dim}

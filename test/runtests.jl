@@ -21,6 +21,17 @@ using StableRNGs
             @test part.r == grid.r
             @test part.dx == grid.dx
         end
+        @test PoissonDiskSampling.blocklength(Val(2)) == 16
+        @test PoissonDiskSampling.blocklength(Val(3)) == 16
+        @test PoissonDiskSampling.blocklength(Val(5)) == 16
+        @test PoissonDiskSampling.blocklength(Val(100)) == 64
+        @test PoissonDiskSampling.blockfactor(Val(2)) == 4
+        @test PoissonDiskSampling.blockfactor(Val(100)) == 6
+        @test PoissonDiskSampling.blocksize((17, 33)) == (1, 2)
+        grid = Grid(Float64, 0.1, (0,5), (0,3))
+        I = PoissonDiskSampling.gridindices_from_blockindex(grid, CartesianIndex(2, 1))
+        @test first(I) == CartesianIndex(17, 1)
+        @test last(I) == CartesianIndex(33, 17)
     end
     @testset "annulus" begin
         for T in (Float64, Float32), n in (1, 2, 3, 5)
@@ -103,6 +114,16 @@ end
                         x === pt && return true
                         sum(@. (pt.-x)^2) > r^2
                     end
+                end
+            end
+            r = 0.4
+            minmaxes = ntuple(_ -> (0,1), Val(5))
+            pts = PoissonDiskSampling.generate(StableRNG(1234), Float64, r, minmaxes...; multithreading=true)
+            @test !isempty(pts)
+            @test all(pts) do pt
+                all(pts) do x
+                    x === pt && return true
+                    sum(@. (pt.-x)^2) > r^2
                 end
             end
         end
