@@ -85,11 +85,6 @@ function gridindices_from_blockindex(grid::Grid{dim}, blk::CartesianIndex{dim}) 
     stop = @. start + len
     (CartesianIndex(start):CartesianIndex(stop)) ∩ CartesianIndices(size(grid))
 end
-function blockpartition(grid::Grid{dim}, blk::CartesianIndex{dim}) where {dim}
-    @boundscheck checkbounds(CartesianIndices(blocksize(grid)), blk)
-    partition(grid, gridindices_from_blockindex(grid, blk))
-end
-
 struct Annulus{dim, T}
     centroid::Vec{dim, T}
     r1::T
