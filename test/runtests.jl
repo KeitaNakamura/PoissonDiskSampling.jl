@@ -50,6 +50,29 @@ using StableRNGs
         @test xs[4] ≈ r * sin(θs[1]) * sin(θs[2]) * sin(θs[3]) * cos(θs[4])
         @test xs[5] ≈ r * sin(θs[1]) * sin(θs[2]) * sin(θs[3]) * sin(θs[4])
     end
+    @testset "annulus" begin
+        for T in (Float64, Float32), n in (2, 3, 5)
+            rng = StableRNG(1234)
+            annulus = PoissonDiskSampling.Annulus(ntuple(_ -> zero(T), Val(n)), T(1), T(2))
+            x = (@inferred PoissonDiskSampling.random_point(rng, annulus))::NTuple{n, T}
+            d² = sum(x .^ 2)
+            @test T(1)^2 ≤ d² ≤ T(2)^2
+        end
+
+        rng = StableRNG(1234)
+        n = 3
+        annulus = PoissonDiskSampling.Annulus((0.0, 0.0, 0.0), 1.0, 2.0)
+        samples = [PoissonDiskSampling.random_point(rng, annulus) for _ in 1:3000]
+        radial = map(samples) do x
+            d = sqrt(sum(x .^ 2))
+            (d^n - annulus.r1^n) / (annulus.r2^n - annulus.r1^n)
+        end
+        direction = map(samples) do x
+            x[1]^2 / sum(x .^ 2)
+        end
+        @test sum(radial) / length(radial) ≈ 0.5 atol=0.03
+        @test sum(direction) / length(direction) ≈ 1/n atol=0.03
+    end
 end
 
 @testset "generate" begin
@@ -86,7 +109,7 @@ end
         rng = StableRNG(1234)
         pts = (@inferred PoissonDiskSampling.generate(rng, T, rand(rng), (0,8), (0,10)))::Vector{NTuple{2, T}}
         centroid = collect(reduce(.+, pts) ./ length(pts))
-        T == Float64 && @test centroid ≈ [4.0275421751736395, 4.957609421464297]
-        T == Float32 && @test centroid ≈ [4.090827f0, 5.0170517f0]
+        T == Float64 && @test centroid ≈ [4.028021944848475, 5.112373302283751]
+        T == Float32 && @test centroid ≈ [3.932441f0, 5.0294213f0]
     end
 end
