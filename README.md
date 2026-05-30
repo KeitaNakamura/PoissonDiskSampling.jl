@@ -17,8 +17,6 @@ pkg> add PoissonDiskSampling
 
 ## How to use
 
-See `?PoissonDiskSampling.generate` for details.
-
 ```julia
 julia> using PoissonDiskSampling
 
@@ -35,3 +33,34 @@ julia> scatter(points)
 ```
 
 ![demo](https://github.com/KeitaNakamura/PoissonDiskSampling.jl/blob/main/assets/demo.svg)
+
+The default number of candidates per active sample is `k=30`. Increase `k` to
+try harder before giving up on an active sample:
+
+```julia
+julia> points = PoissonDiskSampling.generate(r, (0,5), (0,3); k=60);
+```
+
+Pass an RNG as the first argument to control the random stream:
+
+```julia
+julia> using Random
+
+julia> rng = MersenneTwister(1234);
+
+julia> points = PoissonDiskSampling.generate(rng, r, (0,5), (0,3));
+```
+
+For reproducible output, use an explicit RNG and leave `multithreading=false`.
+
+Set `multithreading=true` to sample blocks in parallel:
+
+```julia
+julia> points = PoissonDiskSampling.generate(r, (0,5), (0,3); multithreading=true);
+```
+
+With multithreading, reproducibility is not guaranteed. The result may differ from
+the single-threaded result and may change with thread count or scheduling, even when
+using the same RNG seed.
+
+See `?PoissonDiskSampling.generate` for details.

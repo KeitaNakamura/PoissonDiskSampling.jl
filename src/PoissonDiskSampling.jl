@@ -107,11 +107,16 @@ end
 """
     PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k=30, multithreading=false)
 
-Geneate points based on Poisson disk sampling.
+Generate points based on Poisson disk sampling.
 
 The domain must be rectangular, defined as ``[min_1, max_1)`` ... ``[min_n, max_n)``.
-`r` is the minimum distance between samples. `k` is the number of trials for sampling,
-i.e., the algorithm will give up if no valid sample is found after `k` trials.
+`r` is the minimum distance between samples. `k` is the number of candidates to try
+for each active sample before giving up on it.
+
+For reproducible output, pass an explicit `rng` and leave `multithreading=false`.
+When `multithreading=true`, sampling uses multiple threads. The returned points are
+not guaranteed to be reproducible; they may differ from the single-threaded result
+and may change with thread count or scheduling, even for the same random seed.
 
 The algorithm is based on *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf*.
 """
