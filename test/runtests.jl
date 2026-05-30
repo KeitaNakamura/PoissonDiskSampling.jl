@@ -51,7 +51,7 @@ using StableRNGs
         @test xs[5] ≈ r * sin(θs[1]) * sin(θs[2]) * sin(θs[3]) * sin(θs[4])
     end
     @testset "annulus" begin
-        for T in (Float64, Float32), n in (2, 3, 5)
+        for T in (Float64, Float32), n in (1, 2, 3, 5)
             rng = StableRNG(1234)
             annulus = PoissonDiskSampling.Annulus(ntuple(_ -> zero(T), Val(n)), T(1), T(2))
             x = (@inferred PoissonDiskSampling.random_point(rng, annulus))::NTuple{n, T}
@@ -81,7 +81,8 @@ end
         for multithreading in (false, true)
             Random.seed!(1234)
             r = rand(T)
-            for minmaxes in (((0,6), (-2,3)),
+            for minmaxes in (((0,6),),
+                             ((0,6), (-2,3)),
                              ((0,6), (-2,3), (0,2)),
                              ((0,6), (-2,3), (0,2), (-1,2)))
                 n = length(minmaxes)
@@ -101,9 +102,15 @@ end
                 @test mean ≈ centroid atol=r
             end
             # errors
-            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6); multithreading)                # wrong dimension
-            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (3,-2); multithreading)        # wrong (min, max)
-            @test_throws Exception PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); multithreading) # wrong (min, max)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, zero(T), (0,6), (-2,3); multithreading)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, -r, (0,6), (-2,3); multithreading)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, T(Inf), (0,6), (-2,3); multithreading)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, T(NaN), (0,6), (-2,3); multithreading)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3); k=0, multithreading)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3); k=-1, multithreading)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r; multithreading)                      # wrong dimension
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (3,-2); multithreading)        # wrong (min, max)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); multithreading) # wrong (min, max)
         end
         # StableRNG
         rng = StableRNG(1234)

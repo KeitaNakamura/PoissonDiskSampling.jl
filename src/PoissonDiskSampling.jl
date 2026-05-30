@@ -22,6 +22,8 @@ Base.size(grid::Grid) = grid.dims
 @inline sampling_distance(grid::Grid) = grid.r
 
 function Grid(::Type{T}, r::Real, minmax::Vararg{Tuple{Real, Real}, n}) where {T, n}
+    isfinite(r) && r > 0 || throw(ArgumentError("`r` must be finite and positive"))
+    n > 0 || throw(ArgumentError("dimensions must be ≥ 1"))
     all(Base.splat(<), minmax) || throw(ArgumentError("`(min, max)` must be `min < max`"))
     dx = r/√n
     xmin = getindex.(minmax, 1)
@@ -87,7 +89,6 @@ struct Annulus{dim, T}
 end
 
 function random_point(rng, annulus::Annulus{n, T}) where {n, T}
-    n > 1 || throw(ArgumentError("dimensions must be ≥ 2"))
     r = (annulus.r1^n + rand(rng, T) * (annulus.r2^n - annulus.r1^n)) ^ inv(T(n))
     direction = random_unit_vector(rng, Vec{n, T})
     map(annulus.centroid, direction) do x, d
@@ -128,7 +129,10 @@ i.e., the algorithm will give up if no valid sample is found after `k` trials.
 
 The algorithm is based on *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf*.
 """
-generate(args...; k::Int=30, multithreading::Bool=false) = _generate(args...; k, multithreading)
+function generate(args...; k::Int=30, multithreading::Bool=false)
+    k > 0 || throw(ArgumentError("`k` must be positive"))
+    _generate(args...; k, multithreading)
+end
 _generate(rng, ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, multithreading) where {T} = generate(rng, Grid(T, r, minmaxes...), k, multithreading)
 _generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, multithreading)           = _generate(rng, Float64, r, minmaxes...; k, multithreading)
 _generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, multithreading) where {T} = _generate(Random.default_rng(), T, r, minmaxes...; k, multithreading)
