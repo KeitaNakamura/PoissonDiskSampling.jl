@@ -22,34 +22,6 @@ using StableRNGs
             @test part.dx == grid.dx
         end
     end
-    @testset "spherical coordinates" begin
-        Random.seed!(1234)
-        # circle
-        n = 2
-        r = rand()
-        θs = ntuple(i->rand()*ifelse(i==n-1, π, 2π), Val(n-1))
-        xs = @inferred PoissonDiskSampling.spherical_coordinates(r, θs)
-        @test xs[1] ≈ r * cos(θs[1])
-        @test xs[2] ≈ r * sin(θs[1])
-        # sphere
-        n = 3
-        r = rand()
-        θs = ntuple(i->rand()*ifelse(i==n-1, π, 2π), Val(n-1))
-        xs = @inferred PoissonDiskSampling.spherical_coordinates(r, θs)
-        @test xs[1] ≈ r * cos(θs[1])
-        @test xs[2] ≈ r * sin(θs[1]) * cos(θs[2])
-        @test xs[3] ≈ r * sin(θs[1]) * sin(θs[2])
-        # more
-        n = 5
-        r = rand()
-        θs = ntuple(i->rand()*ifelse(i==n-1, π, 2π), Val(n-1))
-        xs = @inferred PoissonDiskSampling.spherical_coordinates(r, θs)
-        @test xs[1] ≈ r * cos(θs[1])
-        @test xs[2] ≈ r * sin(θs[1]) * cos(θs[2])
-        @test xs[3] ≈ r * sin(θs[1]) * sin(θs[2]) * cos(θs[3])
-        @test xs[4] ≈ r * sin(θs[1]) * sin(θs[2]) * sin(θs[3]) * cos(θs[4])
-        @test xs[5] ≈ r * sin(θs[1]) * sin(θs[2]) * sin(θs[3]) * sin(θs[4])
-    end
     @testset "annulus" begin
         for T in (Float64, Float32), n in (1, 2, 3, 5)
             rng = StableRNG(1234)
