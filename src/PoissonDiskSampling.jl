@@ -189,7 +189,10 @@ function generate!(rng, cells::Array{Vec{dim, T}}, grid::Grid{dim, T}, gridindic
                 break
             end
         end
-        !found && deleteat!(active_list, index)
+        if !found
+            active_list[index] = active_list[end]
+            pop!(active_list)
+        end
     end
 
     cells
