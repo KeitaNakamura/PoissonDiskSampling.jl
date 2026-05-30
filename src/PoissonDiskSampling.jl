@@ -60,8 +60,8 @@ function partition(grid::Grid{dim}, CI::CartesianIndices{dim}) where {dim}
     @boundscheck checkbounds(CartesianIndices(size(grid)), CI)
     Imin = first(CI).I
     Imax = last(CI).I
-    new_min = @. grid.xmin + grid.dx * (Imin - 1)
-    new_max = @. grid.xmin + grid.dx * (Imax - 1)
+    new_min = @. max(grid.xmin, grid.xmin + grid.dx * (Imin - 1))
+    new_max = @. min(grid.xmax, grid.xmin + grid.dx * (Imax - 1))
     Grid(grid.r, grid.dx, new_min, new_max, size(CI))
 end
 

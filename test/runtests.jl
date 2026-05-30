@@ -84,12 +84,19 @@ end
             @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (3,-2); multithreading)        # wrong (min, max)
             @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); multithreading) # wrong (min, max)
         end
+        for multithreading in (false, true)
+            pts = PoissonDiskSampling.generate(StableRNG(1), T, T(100), (0,1), (0,1); multithreading)
+            @test length(pts) == 1
+            @test all(only(pts)) do x
+                zero(T) <= x < one(T)
+            end
+        end
         # StableRNG
         rng = StableRNG(1234)
         pts = (@inferred PoissonDiskSampling.generate(rng, T, rand(rng), (0,8), (0,10)))::Vector{NTuple{2, T}}
         centroid = collect(reduce(.+, pts) ./ length(pts))
-        T == Float64 && @test centroid ≈ [4.146270480612516, 5.06974529674564]
-        T == Float32 && @test centroid ≈ [3.9541404f0, 4.9380393f0]
+        T == Float64 && @test centroid ≈ [4.022368487702714, 4.8572828187868256]
+        T == Float32 && @test centroid ≈ [3.9188566f0, 4.8546963f0]
     end
 
     if Threads.nthreads() > 1
