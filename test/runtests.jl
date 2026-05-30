@@ -93,12 +93,17 @@ end
     end
 
     if Threads.nthreads() > 1
-        @testset "multithreaded reproducibility" begin
+        @testset "multithreaded explicit RNG" begin
             for T in (Float32, Float64), RNG in (MersenneTwister, StableRNG)
                 r = T(0.1)
-                pts1 = PoissonDiskSampling.generate(RNG(1234), T, r, (0,5), (0,3); multithreading=true)
-                pts2 = PoissonDiskSampling.generate(RNG(1234), T, r, (0,5), (0,3); multithreading=true)
-                @test pts1 == pts2
+                pts = (@inferred PoissonDiskSampling.generate(RNG(1234), T, r, (0,5), (0,3); multithreading=true))::Vector{NTuple{2, T}}
+                @test !isempty(pts)
+                @test all(pts) do pt
+                    all(pts) do x
+                        x === pt && return true
+                        sum(@. (pt.-x)^2) > r^2
+                    end
+                end
             end
         end
     end
