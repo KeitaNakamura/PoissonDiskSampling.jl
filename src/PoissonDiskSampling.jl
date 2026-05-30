@@ -104,20 +104,6 @@ function random_unit_vector(rng, ::Type{Vec{n, T}}) where {n, T}
     end
 end
 
-# https://en.wikipedia.org/wiki/N-sphere#Spherical_coordinates
-@inline function spherical_coordinates(r::T, θs::Tuple{Vararg{T}}) where {T}
-    broadcast(*, (r,), coords_sin(θs), coords_cos(θs))
-end
-@inline coords_sin(::Tuple{}) = (1,)
-@inline function coords_sin(θs::Tuple{Vararg{T}}) where {T}
-    xs = coords_sin(Base.front(θs))
-    xlast = xs[end] * sin(θs[end])
-    (xs..., xlast)
-end
-@inline function coords_cos(θs::Tuple{Vararg{T}}) where {T}
-    (map(cos, θs)..., one(T))
-end
-
 """
     PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k=30, multithreading=false)
 
