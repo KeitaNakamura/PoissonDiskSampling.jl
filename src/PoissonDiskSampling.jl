@@ -138,8 +138,15 @@ function generate(rng, grid::Grid{dim, T}, num_generations::Int, multithreading:
     cells = fill(nanvec(Vec{dim, T}), size(grid).-1)
     if multithreading && Threads.nthreads() > 1
         for blocks in threadsafe_blocks(blocksize(grid))
-            Threads.@threads for blk in blocks
-                generate!(rng, cells, grid, gridindices_from_blockindex(grid, blk), num_generations)
+            seeds = [rand(rng, UInt64) for _ in eachindex(blocks)]
+            blockrngs = map(seeds) do seed
+                blockrng = copy(rng)
+                Random.seed!(blockrng, seed)
+                blockrng
+            end
+            Threads.@threads for i in eachindex(blocks)
+                blk = blocks[i]
+                generate!(blockrngs[i], cells, grid, gridindices_from_blockindex(grid, blk), num_generations)
             end
         end
     else

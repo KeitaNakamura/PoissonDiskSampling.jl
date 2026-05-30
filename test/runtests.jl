@@ -112,4 +112,15 @@ end
         T == Float64 && @test centroid ≈ [4.028021944848475, 5.112373302283751]
         T == Float32 && @test centroid ≈ [3.932441f0, 5.0294213f0]
     end
+
+    if Threads.nthreads() > 1
+        @testset "multithreaded reproducibility" begin
+            for T in (Float32, Float64), RNG in (MersenneTwister, StableRNG)
+                r = T(0.1)
+                pts1 = PoissonDiskSampling.generate(RNG(1234), T, r, (0,5), (0,3); multithreading=true)
+                pts2 = PoissonDiskSampling.generate(RNG(1234), T, r, (0,5), (0,3); multithreading=true)
+                @test pts1 == pts2
+            end
+        end
+    end
 end
