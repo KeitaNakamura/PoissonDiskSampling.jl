@@ -22,6 +22,7 @@ Base.size(grid::Grid) = grid.dims
 @inline sampling_distance(grid::Grid) = grid.r
 
 function Grid(::Type{T}, r::Real, minmax::Vararg{Tuple{Real, Real}, n}) where {T, n}
+    T <: AbstractFloat || throw(ArgumentError("`T` must be an AbstractFloat"))
     isfinite(r) && r > 0 || throw(ArgumentError("`r` must be finite and positive"))
     n > 0 || throw(ArgumentError("dimensions must be ≥ 1"))
     all(Base.splat(<), minmax) || throw(ArgumentError("`(min, max)` must be `min < max`"))
@@ -113,8 +114,9 @@ end
 Generate points based on Poisson disk sampling.
 
 The domain must be rectangular, defined as ``[min_1, max_1)`` ... ``[min_n, max_n)``.
-`r` is the minimum distance between samples. `k` is the number of candidates to try
-for each active sample before giving up on it.
+`T` must be a subtype of `AbstractFloat`. `r` is the minimum distance between
+samples. `k` is the number of candidates to try for each active sample before
+giving up on it.
 
 For reproducible output, pass an explicit `rng` and leave `threaded=false`.
 When `threaded=true`, sampling uses multiple threads. The returned points are
