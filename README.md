@@ -53,7 +53,7 @@ julia> points = PoissonDiskSampling.generate(rng, r, (0,5), (0,3));
 
 For reproducible output, use an explicit RNG and leave `multithreading=false`.
 
-Set `multithreading=true` to sample blocks in parallel:
+Set `multithreading=true` to use multiple threads:
 
 ```julia
 julia> points = PoissonDiskSampling.generate(r, (0,5), (0,3); multithreading=true);
