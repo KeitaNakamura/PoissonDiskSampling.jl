@@ -21,6 +21,7 @@ using StableRNGs
             @test part.r == grid.r
             @test part.dx == grid.dx
         end
+        @test_throws ArgumentError Grid(Int, 0.1, (0,1))
         @test PoissonDiskSampling.blocklength(Val(2)) == 16
         @test PoissonDiskSampling.blocklength(Val(3)) == 16
         @test PoissonDiskSampling.blocklength(Val(5)) == 16
@@ -95,6 +96,7 @@ end
             @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (3,-2); threaded)        # wrong (min, max)
             @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); threaded) # wrong (min, max)
         end
+        @test_throws ArgumentError PoissonDiskSampling.generate(Int, 0.1, (0,1))
         for threaded in (false, true)
             pts = PoissonDiskSampling.generate(StableRNG(1), T, T(100), (0,1), (0,1); threaded)
             @test length(pts) == 1
