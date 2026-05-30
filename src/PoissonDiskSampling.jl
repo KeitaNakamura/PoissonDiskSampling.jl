@@ -183,6 +183,7 @@ function generate!(rng, cells::Array{Vec{dim, T}}, grid::Grid{dim, T}, gridindic
                     push!(active_list, Iₖ)
                 end
                 found = true
+                break
             end
         end
         !found && deleteat!(active_list, index)

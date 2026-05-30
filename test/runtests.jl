@@ -88,8 +88,8 @@ end
         rng = StableRNG(1234)
         pts = (@inferred PoissonDiskSampling.generate(rng, T, rand(rng), (0,8), (0,10)))::Vector{NTuple{2, T}}
         centroid = collect(reduce(.+, pts) ./ length(pts))
-        T == Float64 && @test centroid ≈ [4.028021944848475, 5.112373302283751]
-        T == Float32 && @test centroid ≈ [3.932441f0, 5.0294213f0]
+        T == Float64 && @test centroid ≈ [4.146270480612516, 5.06974529674564]
+        T == Float32 && @test centroid ≈ [3.9541404f0, 4.9380393f0]
     end
 
     if Threads.nthreads() > 1
