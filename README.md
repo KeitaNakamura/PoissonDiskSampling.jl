@@ -51,15 +51,15 @@ julia> rng = MersenneTwister(1234);
 julia> points = PoissonDiskSampling.generate(rng, r, (0,5), (0,3));
 ```
 
-For reproducible output, use an explicit RNG and leave `multithreading=false`.
+For reproducible output, use an explicit RNG and leave `threaded=false`.
 
-Set `multithreading=true` to use multiple threads:
+Set `threaded=true` to use multiple threads:
 
 ```julia
-julia> points = PoissonDiskSampling.generate(r, (0,5), (0,3); multithreading=true);
+julia> points = PoissonDiskSampling.generate(r, (0,5), (0,3); threaded=true);
 ```
 
-With multithreading, reproducibility is not guaranteed. The result may differ from
+With `threaded=true`, reproducibility is not guaranteed. The result may differ from
 the single-threaded result and may change with thread count or scheduling, even when
 using the same RNG seed.
 

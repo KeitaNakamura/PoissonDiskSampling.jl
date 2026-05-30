@@ -61,7 +61,7 @@ end
 @testset "generate" begin
     # generate
     for T in (Float32, Float64)
-        for multithreading in (false, true)
+        for threaded in (false, true)
             Random.seed!(1234)
             r = rand(T)
             for minmaxes in (((0,6),),
@@ -70,7 +70,7 @@ end
                              ((0,6), (-2,3), (0,2), (-1,2)))
                 n = length(minmaxes)
                 dx = r / sqrt(n)
-                pts = (@inferred PoissonDiskSampling.generate(T, r, minmaxes...; multithreading))::Vector{NTuple{n, T}}
+                pts = (@inferred PoissonDiskSampling.generate(T, r, minmaxes...; threaded))::Vector{NTuple{n, T}}
                 # Check the distance between samples
                 @test all(pts) do pt
                     all(pts) do x
@@ -85,18 +85,18 @@ end
                 @test mean ≈ centroid atol=r
             end
             # errors
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, zero(T), (0,6), (-2,3); multithreading)
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, -r, (0,6), (-2,3); multithreading)
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, T(Inf), (0,6), (-2,3); multithreading)
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, T(NaN), (0,6), (-2,3); multithreading)
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3); k=0, multithreading)
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3); k=-1, multithreading)
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, r; multithreading)                      # wrong dimension
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (3,-2); multithreading)        # wrong (min, max)
-            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); multithreading) # wrong (min, max)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, zero(T), (0,6), (-2,3); threaded)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, -r, (0,6), (-2,3); threaded)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, T(Inf), (0,6), (-2,3); threaded)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, T(NaN), (0,6), (-2,3); threaded)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3); k=0, threaded)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3); k=-1, threaded)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r; threaded)                      # wrong dimension
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (3,-2); threaded)        # wrong (min, max)
+            @test_throws ArgumentError PoissonDiskSampling.generate(T, r, (0,6), (-2,3), (2,0); threaded) # wrong (min, max)
         end
-        for multithreading in (false, true)
-            pts = PoissonDiskSampling.generate(StableRNG(1), T, T(100), (0,1), (0,1); multithreading)
+        for threaded in (false, true)
+            pts = PoissonDiskSampling.generate(StableRNG(1), T, T(100), (0,1), (0,1); threaded)
             @test length(pts) == 1
             @test all(only(pts)) do x
                 zero(T) <= x < one(T)
@@ -111,10 +111,10 @@ end
     end
 
     if Threads.nthreads() > 1
-        @testset "multithreaded explicit RNG" begin
+        @testset "threaded explicit RNG" begin
             for T in (Float32, Float64), RNG in (MersenneTwister, StableRNG)
                 r = T(0.1)
-                pts = (@inferred PoissonDiskSampling.generate(RNG(1234), T, r, (0,5), (0,3); multithreading=true))::Vector{NTuple{2, T}}
+                pts = (@inferred PoissonDiskSampling.generate(RNG(1234), T, r, (0,5), (0,3); threaded=true))::Vector{NTuple{2, T}}
                 @test !isempty(pts)
                 @test all(pts) do pt
                     all(pts) do x
@@ -125,7 +125,7 @@ end
             end
             r = 0.4
             minmaxes = ntuple(_ -> (0,1), Val(5))
-            pts = PoissonDiskSampling.generate(StableRNG(1234), Float64, r, minmaxes...; multithreading=true)
+            pts = PoissonDiskSampling.generate(StableRNG(1234), Float64, r, minmaxes...; threaded=true)
             @test !isempty(pts)
             @test all(pts) do pt
                 all(pts) do x

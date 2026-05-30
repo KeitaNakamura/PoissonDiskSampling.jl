@@ -108,7 +108,7 @@ function random_unit_vector(rng, ::Type{Vec{n, T}}) where {n, T}
 end
 
 """
-    PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k=30, multithreading=false)
+    PoissonDiskSampling.generate([rng=GLOBAL_RNG], [T=Float64], r, (min_1, max_1)..., (min_n, max_n); k=30, threaded=false)
 
 Generate points based on Poisson disk sampling.
 
@@ -116,25 +116,25 @@ The domain must be rectangular, defined as ``[min_1, max_1)`` ... ``[min_n, max_
 `r` is the minimum distance between samples. `k` is the number of candidates to try
 for each active sample before giving up on it.
 
-For reproducible output, pass an explicit `rng` and leave `multithreading=false`.
-When `multithreading=true`, sampling uses multiple threads. The returned points are
+For reproducible output, pass an explicit `rng` and leave `threaded=false`.
+When `threaded=true`, sampling uses multiple threads. The returned points are
 not guaranteed to be reproducible; they may differ from the single-threaded result
 and may change with thread count or scheduling, even for the same random seed.
 
 The algorithm is based on *https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf*.
 """
-function generate(args...; k::Int=30, multithreading::Bool=false)
+function generate(args...; k::Int=30, threaded::Bool=false)
     k > 0 || throw(ArgumentError("`k` must be positive"))
-    _generate(args...; k, multithreading)
+    _generate(args...; k, threaded)
 end
-_generate(rng, ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, multithreading) where {T} = generate(rng, Grid(T, r, minmaxes...), k, multithreading)
-_generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, multithreading)           = _generate(rng, Float64, r, minmaxes...; k, multithreading)
-_generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, multithreading) where {T} = _generate(Random.default_rng(), T, r, minmaxes...; k, multithreading)
-_generate(                r, minmaxes::Tuple{Real, Real}...; k, multithreading)           = _generate(Random.default_rng(), r, minmaxes...; k, multithreading)
+_generate(rng, ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, threaded) where {T} = generate(rng, Grid(T, r, minmaxes...), k, threaded)
+_generate(rng,            r, minmaxes::Tuple{Real, Real}...; k, threaded)           = _generate(rng, Float64, r, minmaxes...; k, threaded)
+_generate(     ::Type{T}, r, minmaxes::Tuple{Real, Real}...; k, threaded) where {T} = _generate(Random.default_rng(), T, r, minmaxes...; k, threaded)
+_generate(                r, minmaxes::Tuple{Real, Real}...; k, threaded)           = _generate(Random.default_rng(), r, minmaxes...; k, threaded)
 
-function generate(rng, grid::Grid{dim, T}, num_generations::Int, multithreading::Bool) where {dim, T}
+function generate(rng, grid::Grid{dim, T}, num_generations::Int, threaded::Bool) where {dim, T}
     cells = fill(nanvec(Vec{dim, T}), size(grid).-1)
-    if multithreading && Threads.nthreads() > 1
+    if threaded && Threads.nthreads() > 1
         for blocks in threadsafe_blocks(blocksize(grid))
             seeds = [rand(rng, UInt64) for _ in eachindex(blocks)]
             blockrngs = map(seeds) do seed
